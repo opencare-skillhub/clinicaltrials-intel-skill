@@ -47,4 +47,4 @@ ln -s "$(pwd)" ~/.agents/skills/clinicaltrials-intel
 
 ## 许可
 
-AGPL-3.0 + 非商业性使用限制（继承自主项目）。
+Apache License 2.0。详情见 [LICENSE](./LICENSE)。
