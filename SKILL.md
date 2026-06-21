@@ -115,6 +115,8 @@ python3 fastgpt_sync.py --once --mode=today   # 同步（today | all）
 - **GeWe 文字分批**：单条消息按 `GEWE_MSG_MAX_LEN`（默认 500）分批，避免微信折叠，分批加 `(续 i/n)` 尾标。
 - **渠道默认开关**：`gewe_txt=true`、`gewe_card=false`。主菜单快捷推送以**文字为默认入口**（选项 3，开箱即用），卡片下移到选项 4 并提示用户先在 `config.yaml` 开启。新增菜单项时遵循同一原则——默认开启的渠道靠前、默认关闭的渠道带配置提示。
 - **推送失败隔离**：多群循环推送时某群失败不影响其他群；微信失败不影响 TG 主渠道。
+- **多疾病支持**：疾病由 `.env` 的 `SEARCH_CONDITION` 或命令行 `--condition` 控制，一次运行一种疾病。落地目录、FastGPT 集合自动按疾病分（`output/{date}-{disease}/`）。**不要**为不同疾病新建仓库——配置切换即可。
+- **品牌文案通用化**：标题/footer 统一从 `lib/branding.py` 的 `get_title(condition)` / `get_footer(condition)` 取，**不要**在业务代码里硬编码。胰腺癌保持「小胰宝」专属文案（关注小胰宝助手公众号）；其它疾病走通用「小x宝{疾病中文}」文案（关注小胰宝公众号 + github搜索opencare社区）。新增疾病中文映射加到 `branding.py` 的 `_DISEASE_CN`。
 - **重试**：同步脚本内置 3 次重试，适配不稳定网络。
 
 更详细的架构与历史决策见 `references/architecture.md`，配置项逐条说明见 `references/config-reference.md`。

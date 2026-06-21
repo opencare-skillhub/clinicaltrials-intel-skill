@@ -58,6 +58,11 @@ clinicaltrials-intel-skill/
 # 抓取 10 个最近中国试验并推 GeWe 文字(默认开箱渠道)
 python3 main.py --10 --china --send-gewe-txt
 
+# 切换疾病:--condition 指定(目录/标题/footer 自动跟随)
+python3 main.py --top 1 --condition "Breast Cancer" --china --send-gewe-txt   # 乳腺癌
+python3 main.py --top 1 --condition "Lung Cancer" --china --send-gewe-txt     # 肺癌
+# 长期固定某疾病:改 .env 的 SEARCH_CONDITION=Breast Cancer
+
 # 主菜单(无参数)
 python3 main.py
 
