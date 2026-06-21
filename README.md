@@ -34,6 +34,8 @@ python3 main.py           # 运行(必须在仓库根目录)
 >
 > 不需要微信推送？保持 `GEWE_ENABLED=false`（默认）即可，Telegram/飞书渠道完全免费可用。
 
+> 📖 **第一次申请凭据？** 各渠道的详细申请步骤见 [docs/credentials-guide.md](./docs/credentials-guide.md)（含 TG Bot 创建、飞书应用配置、GeWeChat 购买、翻译模型 Key 申请，以及合规提醒）。
+
 ## 仓库内容
 
 ```
