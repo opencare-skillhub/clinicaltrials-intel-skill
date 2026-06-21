@@ -1,6 +1,6 @@
-# clinicaltrials-intel skill
+# clinicaltrials-intel
 
-胰腺癌临床试验情报自动化系统——**开箱可配置**的 ZCode 技能仓库。自带完整业务代码，clone 后一条命令完成部署。
+胰腺癌临床试验情报自动化系统——**开箱可配置**的通用技能包。自带完整业务代码，clone 后一条命令完成部署。不绑定任何特定产品，可作为独立工具运行，也可集成进你习惯的 AI 编程工作流。
 
 ## 快速开始
 
@@ -23,12 +23,16 @@ python3 main.py           # 运行(必须在仓库根目录)
 
 ### 渠道凭据速查
 
-| 渠道 | 环境变量 | 开关 |
-|------|---------|------|
-| GeWe 微信 | `GEWE_APP_ID` + `GEWE_TOKEN` + `GEWE_TO_WXID` | `GEWE_ENABLED=true` |
-| Telegram | `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` | 默认开 |
-| 飞书 | `FEISHU_APP_ID` + `FEISHU_APP_SECRET` + `FEISHU_CHAT_IDS` | 默认开 |
-| FastGPT | `FASTGPT_BASE_URL` + `FASTGPT_API_KEY` + `FASTGPT_DATASET_ID` | 默认开 |
+| 渠道 | 环境变量 | 开关 | 说明 |
+|------|---------|------|------|
+| GeWe 微信 | `GEWE_APP_ID` + `GEWE_TOKEN` + `GEWE_TO_WXID` | `GEWE_ENABLED=true` | 💰 **付费服务**，见下方说明 |
+| Telegram | `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` | 默认开 | 免费 |
+| 飞书 | `FEISHU_APP_ID` + `FEISHU_APP_SECRET` + `FEISHU_CHAT_IDS` | 默认开 | 免费 |
+| FastGPT | `FASTGPT_BASE_URL` + `FASTGPT_API_KEY` + `FASTGPT_DATASET_ID` | 默认开 | 需自建/托管实例 |
+
+> 💰 **GeWe 微信推送是付费服务**：微信群推送能力基于 [GeWeChat](https://www.geweapi.com/#/newHome) 平台，需自行注册并购买服务套餐，获取 `APP_ID` 和 `TOKEN`。官网：https://www.geweapi.com/#/newHome
+>
+> 不需要微信推送？保持 `GEWE_ENABLED=false`（默认）即可，Telegram/飞书渠道完全免费可用。
 
 ## 仓库内容
 
@@ -62,19 +66,22 @@ python3 main.py --auto
 python3 push_existing_report.py --latest --send-gewe-txt
 ```
 
-## 安装为 ZCode 技能
+## 集成与贡献
+
+本技能包不绑定特定产品，可独立运行。若你想把它接入 AI 编程助手（如 ZCode）作为可复用技能：
 
 ```bash
 ./scripts/install.sh            # 软链接到 ~/.agents/skills/clinicaltrials-intel
 ```
 
-详细说明见 [SKILL.md](./SKILL.md)。
+也欢迎使用 [ZCode](https://zcode.dev) 等工具在本仓库基础上开发、迭代和贡献新功能。详细架构与开发约定见 [SKILL.md](./SKILL.md)。
 
 ## 安全
 
 - ✅ `.env` / `config.yaml`（运行时配置）已在 `.gitignore`，**永不提交**
 - ✅ 仓库只含模板（占位符）和业务代码，无真实凭据
 - ✅ 含真实 token 的调试脚本（`kick_off_member.py` / `sample_gewe_*.py` 等）已排除
+- 💡 **本地直接使用**：为方便真实运行，可从已有项目把真实 `.env` 和 `config.yaml` 复制到本仓库根目录——它们已被 `.gitignore` 排除，不会进 git，本地放心用。
 
 ## 许可
 
