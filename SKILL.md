@@ -68,12 +68,12 @@ data/fastgpt_sync_state.json       # 同步指纹库（gitignore）
 ## 配置体系（三层，按优先级）
 
 1. **`.env`**（凭据，本地存在，禁止提交 git）—— API key、bot token、群 ID。
-2. **`config.yaml`**（行为与开关，提交 git）—— 渠道默认开关、流程行为、翻译模型 fallback 链。
+2. **`config.yaml`**（行为与开关，**禁止提交 git**）—— 渠道默认开关、流程行为、翻译模型 fallback 链。运行时从 `assets/config.yaml.template` 生成。
 3. **命令行参数**（最高优先级）—— `--send-xxx` / `--no-channels` 覆盖 config.yaml 默认值。
 
 翻译模型走 **fallback 链**（见 `config.yaml` 的 `translate_models`），顺序即优先级，每个模型走 OpenAI 兼容协议，`api_key_env` 引用 `.env` 里的变量名（敏感信息不写进 yaml）。向后兼容旧的 `LLM_PROVIDER` + 小写变量。
 
-> 配置文件模板见 `assets/config.yaml.template` 和 `assets/.env.template`。新环境部署时复制模板填值，**不要**把真实凭据写进模板。
+> 配置文件模板见 `assets/config.yaml.template` 和 `assets/.env.template`。本 skill **自带完整业务代码**，clone 后用 `scripts/setup.sh` 一键生成配置并装依赖——详见下方「完整部署」。**不要**把真实凭据写进模板。
 
 ---
 
@@ -121,12 +121,45 @@ python3 fastgpt_sync.py --once --mode=today   # 同步（today | all）
 
 ---
 
-## 安装到默认技能目录
+## 完整部署（开箱可配置）
 
-本 skill 仓库放在任意位置（如 `~/Downloads/clinicaltrials-intel-skill`），通过软链接接入 ZCode 默认发现路径 `~/.agents/skills`：
+本 skill **自带完整业务代码**，clone 后一条命令完成可运行配置：
 
 ```bash
-ln -s ~/Downloads/clinicaltrials-intel-skill ~/.agents/skills/clinicaltrials-intel
+git clone https://github.com/opencare-skillhub/clinicaltrials-intel-skill.git
+cd clinicaltrials-intel-skill
+./scripts/setup.sh
 ```
 
-这样仓库源码（可 git 发布）与技能安装位置解耦，更新仓库即更新技能。
+`setup.sh` 自动完成：① 创建 venv + 装依赖（含主项目漏掉的 PyYAML）② 从模板生成 `.env` 和 `config.yaml`（到仓库根，与 `lib/config.py` 定位一致）③ 创建 `output/` `data/` `cache/` 运行时目录 ④ 打印分级配置指引并调用校验。
+
+### 配置分级（按需填写，零配置也能启动）
+
+| 级别 | 项 | 不配的后果 |
+|------|----|-----------|
+| 🔴 启动必需 | Python 依赖 | `import` 崩溃（`setup.sh` 已解决） |
+| 🟡 中文翻译 | `.env` 里至少 1 个 `*_API_KEY`（推荐 `QWEN_API_KEY`） | 翻译降级为英文原文输出 |
+| 🟢 推送渠道 | 各渠道凭据三件套 | 缺凭据的渠道**静默跳过**，不影响其他渠道 |
+
+### 标准部署流程
+
+```bash
+./scripts/setup.sh                    # 一键生成配置 + 装依赖
+nano .env                             # 编辑 .env 填入真实凭据
+python3 scripts/check_config.py       # 校验配置（🟢/🟡/🔴 分级报告）
+python3 main.py                       # 运行（必须在本仓库根目录执行）
+```
+
+> ⚠️ **运行目录**：`main.py` 调 `load_dotenv()` 无参数，靠 CWD 找 `.env`；`lib/config.py` 用 `__file__` 定位仓库根的 `config.yaml`。**必须在仓库根执行** `python3 main.py`，否则配置加载不到。
+
+---
+
+## 安装为 ZCode 技能
+
+仓库通过软链接接入 ZCode 默认发现路径 `~/.agents/skills`：
+
+```bash
+ln -s "$PWD/clinicaltrials-intel-skill" ~/.agents/skills/clinicaltrials-intel
+```
+
+或用自带脚本：`./scripts/install.sh`（软链接）/ `--copy`（复制）/ `--uninstall`。源码（可 git 发布）与技能安装位置解耦，更新仓库即更新技能。

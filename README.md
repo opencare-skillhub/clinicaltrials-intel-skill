@@ -1,49 +1,80 @@
 # clinicaltrials-intel skill
 
-胰腺癌临床试验情报自动化系统的开发与运维 ZCode 技能。沉淀了 `clinicaltrials推送和订阅` 项目的架构、运行流程、配置规范与开发约定。
+胰腺癌临床试验情报自动化系统——**开箱可配置**的 ZCode 技能仓库。自带完整业务代码，clone 后一条命令完成部署。
 
-## 内容
+## 快速开始
+
+```bash
+git clone https://github.com/opencare-skillhub/clinicaltrials-intel-skill.git
+cd clinicaltrials-intel-skill
+./scripts/setup.sh        # 一键:装依赖 + 生成配置 + 创建运行时目录
+nano .env                 # 填入你的凭据(至少 1 个 LLM key)
+python3 scripts/check_config.py   # 校验配置(分级报告)
+python3 main.py           # 运行(必须在仓库根目录)
+```
+
+## 配置分级（零配置也能启动，按需提升能力）
+
+| 级别 | 配什么 | 不配的后果 |
+|------|--------|-----------|
+| 🔴 启动必需 | Python 依赖 | `import` 崩溃（`setup.sh` 已解决） |
+| 🟡 中文翻译 | `.env` 至少 1 个 `*_API_KEY`（推荐 `QWEN_API_KEY`） | 翻译降级为英文 |
+| 🟢 推送渠道 | 各渠道凭据（见下） | 该渠道静默跳过，不影响其他 |
+
+### 渠道凭据速查
+
+| 渠道 | 环境变量 | 开关 |
+|------|---------|------|
+| GeWe 微信 | `GEWE_APP_ID` + `GEWE_TOKEN` + `GEWE_TO_WXID` | `GEWE_ENABLED=true` |
+| Telegram | `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` | 默认开 |
+| 飞书 | `FEISHU_APP_ID` + `FEISHU_APP_SECRET` + `FEISHU_CHAT_IDS` | 默认开 |
+| FastGPT | `FASTGPT_BASE_URL` + `FASTGPT_API_KEY` + `FASTGPT_DATASET_ID` | 默认开 |
+
+## 仓库内容
 
 ```
 clinicaltrials-intel-skill/
-├── SKILL.md                         # 技能主体（系统概览 + 运行 + 开发约定）
-├── assets/
-│   ├── .env.template                # 凭据模板（占位符,无真实密钥）
-│   └── config.yaml.template         # 渠道/流程/翻译模型 fallback 链模板
-├── references/
-│   ├── architecture.md              # 架构决策与历史背景
-│   └── config-reference.md          # 配置项逐条参考
-├── scripts/
-│   └── install.sh                   # 安装到 ~/.agents/skills
-├── .gitignore                       # 保护敏感文件(只提交模板)
-└── README.md
+├── main.py / push_existing_report.py / daily_ctgov_check_tgbot.py   # 入口脚本
+│   / ctgov_full_sync_rag.py / fastgpt_sync.py
+├── lib/                       # 核心模块(config/ctgov_api/llm_client/channels/*)
+├── config.yaml                # 运行时配置(setup.sh 生成,gitignore)
+├── requirements.txt           # 依赖清单(补齐主项目漏掉的 PyYAML)
+├── SKILL.md                   # 技能主体
+├── assets/                    # 配置模板(.env.template / config.yaml.template)
+├── scripts/                   # setup.sh(部署) check_config.py(校验) install.sh(装技能)
+├── references/                # 架构文档 + 配置参考
+└── docs/                      # 使用文档
 ```
 
-## 安装到默认技能目录
+## 常用命令
 
 ```bash
-./scripts/install.sh            # 软链接（默认,源更新即技能更新）
-./scripts/install.sh --copy     # 复制（独立副本）
-./scripts/install.sh --uninstall
+# 抓取 10 个最近中国试验并推 GeWe 文字(默认开箱渠道)
+python3 main.py --10 --china --send-gewe-txt
+
+# 主菜单(无参数)
+python3 main.py
+
+# 全自动流程(适合 cron)
+python3 main.py --auto
+
+# 推送已有报告(补发/测试)
+python3 push_existing_report.py --latest --send-gewe-txt
 ```
 
-或手动软链接：
+## 安装为 ZCode 技能
 
 ```bash
-ln -s "$(pwd)" ~/.agents/skills/clinicaltrials-intel
+./scripts/install.sh            # 软链接到 ~/.agents/skills/clinicaltrials-intel
 ```
 
-安装后重启 ZCode 会话即可触发。
+详细说明见 [SKILL.md](./SKILL.md)。
 
-## 配置文件安全约定
+## 安全
 
-- **模板可提交**：`assets/.env.template`、`assets/config.yaml.template` 只含占位符。
-- **真实配置绝不提交**：`.env`、`config.yaml` 等含真实凭据的文件已在 `.gitignore` 中，本地可用，禁止上传 git。
-- 新增含凭据的文件时，同步加进 `.gitignore`。
-
-## 触发场景
-
-提到以下内容时自动触发：临床试验订阅推送、ClinicalTrials.gov 抓取翻译、FastGPT 知识库同步、GeWe/飞书/TG 推送渠道、pancreatic cancer 情报系统、配置文件模板。
+- ✅ `.env` / `config.yaml`（运行时配置）已在 `.gitignore`，**永不提交**
+- ✅ 仓库只含模板（占位符）和业务代码，无真实凭据
+- ✅ 含真实 token 的调试脚本（`kick_off_member.py` / `sample_gewe_*.py` 等）已排除
 
 ## 许可
 
