@@ -86,6 +86,12 @@ source .venv/bin/activate
 # 交互式菜单（默认仅上传当天）
 python3 main.py
 
+# 主菜单快捷推送（无参数进入 interactive_menu）：
+#   3️⃣  10 个最近中国试验 → 微信文字 (gewe_txt)   ← 默认开启，开箱即用
+#   4️⃣  10 个最近中国试验 → 微信卡片 (gewe_card)  ← 默认关闭，需先在 config.yaml 设 channels.gewe_card: true
+# 两个选项都复用 run_cli_mode 两阶段流程（china=True, latest=True, top=10）。
+# 选项 4 在卡片关闭时会拦在抓取前并提示配置，不白跑流程。
+
 # 自动全流程（适合 cron）
 python3 main.py --auto
 
@@ -107,6 +113,7 @@ python3 fastgpt_sync.py --once --mode=today   # 同步（today | all）
 - **FastGPT 数据清洗**：处理原始 JSON 时强制剔除 `ancestors`、`conditionBrowseModule`、`interventionBrowseModule`、`derivedSection`——这些字段产生索引噪音，降低 RAG 命中率。
 - **中国中心高亮**：含中国医院的试验，TG 加 `🇨🇳` 标记，GeWe 卡片在标题前缀 + 描述末尾双重标注 `🇨🇳 中国有中心（优先关注）`。
 - **GeWe 文字分批**：单条消息按 `GEWE_MSG_MAX_LEN`（默认 500）分批，避免微信折叠，分批加 `(续 i/n)` 尾标。
+- **渠道默认开关**：`gewe_txt=true`、`gewe_card=false`。主菜单快捷推送以**文字为默认入口**（选项 3，开箱即用），卡片下移到选项 4 并提示用户先在 `config.yaml` 开启。新增菜单项时遵循同一原则——默认开启的渠道靠前、默认关闭的渠道带配置提示。
 - **推送失败隔离**：多群循环推送时某群失败不影响其他群；微信失败不影响 TG 主渠道。
 - **重试**：同步脚本内置 3 次重试，适配不稳定网络。
 
