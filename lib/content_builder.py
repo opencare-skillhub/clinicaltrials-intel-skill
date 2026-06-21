@@ -124,7 +124,7 @@ def build_push_content(studies, auto_save_json=True, condition=None):
         rf.write(f"# {get_title(effective_condition)} ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n\n")
         rf.write(f"## 🔬 {disease_cn_name(effective_condition)}临床试验每日更新\n\n")
         rf.write(f"- 监测日期: 最近30天\n")
-        rf.write(f"- 监测要素：#胰腺癌 #KRAS/TP53/ATM/BRCA/PMT5/HER2/ERBB2相关突变\n\n")
+        rf.write(f"- 监测要素：#{disease_cn_name(effective_condition)}相关临床试验动态\n\n")
         rf.write(f"### 发现 {total} 个符合条件的临床试验\n\n")
         rf.write(f"## 【汇总清单】\n")
 
@@ -152,7 +152,7 @@ def build_push_content(studies, auto_save_json=True, condition=None):
             total_groups = (total + group_size - 1) // group_size
 
             print(f"[{datetime.now()}] 生成详情组 {group_num}/{total_groups}...")
-            detail_header = f"## 🔔 胰腺癌临床试验详情 ({group_num}/{total_groups})\n\n"
+            detail_header = f"## 🔔 {disease_cn_name(effective_condition)}临床试验详情 ({group_num}/{total_groups})\n\n"
             group_details = ""
             for j, study in enumerate(group):
                 current_idx = i + j + 1

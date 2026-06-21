@@ -169,7 +169,7 @@ def send_telegram_combined(studies):
             total_groups = (len(studies) + group_size - 1) // group_size
 
             print(f"[{datetime.now()}] Preparing detail group {group_num}/{total_groups}...")
-            detail_header = f"## 🔔 胰腺癌临床试验详情 ({group_num}/{total_groups})\n\n"
+            detail_header = f"## 🔔 {disease_cn_name(SEARCH_CONDITION)}临床试验详情 ({group_num}/{total_groups})\n\n"
             group_details = ""
             for j, study in enumerate(group):
                 current_idx = i + j + 1
