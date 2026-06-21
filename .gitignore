@@ -15,6 +15,7 @@ config.yml
 
 # 运行时数据
 data/
+data/*.json
 output/
 cache/
 *.backup
