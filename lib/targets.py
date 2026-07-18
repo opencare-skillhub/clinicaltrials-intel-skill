@@ -76,6 +76,8 @@ def expand_keywords(
     groups: Iterable[str] | None = None,
     config: dict[str, Any] | None = None,
     include_aliases: bool = False,
+    compact: bool | None = None,
+    per_target_limit: int | None = None,
 ) -> list[str]:
     """
     展开检索关键词列表（保序去重）。
@@ -83,10 +85,19 @@ def expand_keywords(
     - 默认取每个靶点的 keywords 字段；为空则回退 aliases
     - include_aliases=True 时额外并入 aliases
     - 不默认展开 search_terms.trial_query_terms（避免 OR 过长）
+    - compact=True（默认，可用 TARGETS_COMPACT=0 关闭）: 每靶点只取前 N 个短词，
+      避免 100+ OR 词把 CTGov 召回撑成“几乎所有胰腺癌试验”
     """
     targets = list_targets(groups=groups, config=config)
     if not targets:
         return list(_FALLBACK_KEYWORDS)
+
+    if compact is None:
+        compact = os.getenv("TARGETS_COMPACT", "1").strip().lower() not in {
+            "0", "false", "no", "full",
+        }
+    if per_target_limit is None:
+        per_target_limit = int(os.getenv("TARGETS_PER_TARGET_LIMIT", "4" if compact else "50"))
 
     seen: set[str] = set()
     out: list[str] = []
@@ -101,7 +112,19 @@ def expand_keywords(
         if include_aliases:
             words.extend(str(x).strip() for x in aliases if str(x).strip())
 
+        # compact: 优先短符号/别名，丢掉长描述与过宽词
+        filtered: list[str] = []
         for w in words:
+            if not w or w.lower() in _BROAD_QUERY_TERMS:
+                continue
+            if compact and (len(w) > 24 or w.count(" ") >= 3):
+                continue
+            if w not in seen and w not in filtered:
+                filtered.append(w)
+            if compact and len(filtered) >= max(1, per_target_limit):
+                break
+
+        for w in filtered:
             if w not in seen:
                 seen.add(w)
                 out.append(w)
@@ -161,6 +184,16 @@ def _target_match_keys(target: dict[str, Any]) -> list[str]:
     return keys
 
 
+# 过宽词：单独 OR 会把大量无关 ADC/免疫试验拉进来
+_BROAD_QUERY_TERMS = {
+    "ras", "adc", "car-t", "car t", "car-t therapy",
+    "monoclonal antibody", "bispecific antibody", "bispecific",
+    "radioimmunotherapy", "mek inhibitor", "parp inhibitor",
+    "platinum sensitivity", "immune checkpoint inhibitor",
+    "antibody", "inhibitor", "vaccine",
+}
+
+
 def target_keywords(
     target: dict[str, Any],
     include_aliases: bool = True,
@@ -191,6 +224,8 @@ def target_keywords(
     if not words and target.get("name"):
         words.append(str(target["name"]).strip())
     for w in words:
+        if not w or w.lower() in _BROAD_QUERY_TERMS:
+            continue
         if w not in seen:
             seen.add(w)
             out.append(w)

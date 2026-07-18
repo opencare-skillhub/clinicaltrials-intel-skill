@@ -101,9 +101,37 @@ def compact_keywords(pdac_t, aliases, search_terms, limit=12) -> list[str]:
     for x in search_terms or []:
         kws.append(str(x).replace(" pancreatic", "").strip())
     # 过滤过宽噪声（单独出现会污染召回）
-    block = {"RAS", "ADC", "CAR-T", "monoclonal antibody", "bispecific antibody", "MEK inhibitor"}
-    kws = [k for k in uniq(kws) if k not in block]
+    block = {
+        "RAS", "ADC", "CAR-T", "CAR T", "CAR-T therapy",
+        "monoclonal antibody", "bispecific antibody", "bispecific",
+        "radioimmunotherapy", "MEK inhibitor", "PARP inhibitor",
+        "platinum sensitivity", "immune checkpoint inhibitor",
+    }
+    kws = [k for k in uniq(kws) if k not in block and len(k) >= 2]
     return kws[:limit]
+
+
+_BROAD_TERMS = {
+    "RAS", "ADC", "CAR-T", "CAR T", "CAR-T therapy",
+    "monoclonal antibody", "bispecific antibody", "bispecific",
+    "radioimmunotherapy", "MEK inhibitor", "PARP inhibitor",
+    "platinum sensitivity", "immune checkpoint inhibitor",
+    "antibody", "inhibitor", "vaccine",
+}
+
+
+def _filter_broad(terms) -> list[str]:
+    out = []
+    for x in terms or []:
+        s = str(x).strip()
+        if not s or s in _BROAD_TERMS:
+            continue
+        # 过泛的 class 词：无靶点前缀时丢弃
+        low = s.lower()
+        if low in {"adc", "car-t", "car t"}:
+            continue
+        out.append(s)
+    return uniq(out)
 
 
 def rich_search_terms(pdac_t) -> dict | None:
@@ -111,11 +139,12 @@ def rich_search_terms(pdac_t) -> dict | None:
         return None
     st = pdac_t.get("search_terms") or {}
     return {
-        "exact": uniq(st.get("exact") or [])[:30],
-        "zh": uniq(st.get("zh") or [])[:20],
-        "drug_or_class": uniq(st.get("drug_or_class") or [])[:20],
+        "exact": _filter_broad(st.get("exact") or [])[:30],
+        "zh": _filter_broad(st.get("zh") or [])[:20],
+        # 保留带靶点前缀的药物词（如 B7-H3 ADC），去掉裸 ADC/CAR-T
+        "drug_or_class": _filter_broad(st.get("drug_or_class") or [])[:20],
         # 单一靶点可展开；默认 KEYWORDS 不用这个全量
-        "trial_query_terms": uniq(st.get("trial_query_terms") or [])[:50],
+        "trial_query_terms": _filter_broad(st.get("trial_query_terms") or [])[:50],
         "requires_context": bool(st.get("requires_context")),
     }
 

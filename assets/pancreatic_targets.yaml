@@ -221,7 +221,6 @@ targets:
     - KRAS
     - K-RAS
     - Kirsten rat sarcoma viral oncogene
-    - RAS
     - KRAS wild type
     - KRAS wild-type
     - KRAS WT
@@ -261,7 +260,6 @@ targets:
     - KRAS
     - K-RAS
     - Kirsten rat sarcoma viral oncogene
-    - RAS
     - KRAS wild type
     - KRAS wild-type
     - KRAS WT
@@ -487,10 +485,6 @@ targets:
     - IBI389
     - IBI343
     - CMG901
-    - monoclonal antibody
-    - bispecific antibody
-    - ADC
-    - CAR-T
     trial_query_terms:
     - CLDN18
     - CLDN18.2
@@ -507,10 +501,6 @@ targets:
     - IBI389
     - IBI343
     - CMG901
-    - monoclonal antibody
-    - bispecific antibody
-    - ADC
-    - CAR-T
     requires_context: false
 - id: brca1
   name: BRCA1
@@ -554,15 +544,11 @@ targets:
     - BRCA1胚系突变
     - BRCA1体细胞突变
     - BRCA1致病突变
-    drug_or_class:
-    - PARP inhibitor
-    - platinum sensitivity
+    drug_or_class: []
     trial_query_terms:
     - BRCA1
     - Breast cancer type 1 susceptibility protein
     - BRCA 1
-    - PARP inhibitor
-    - platinum sensitivity
     requires_context: false
 - id: brca2
   name: BRCA2
@@ -606,15 +592,11 @@ targets:
     - BRCA2胚系突变
     - BRCA2体细胞突变
     - BRCA2致病突变
-    drug_or_class:
-    - PARP inhibitor
-    - platinum sensitivity
+    drug_or_class: []
     trial_query_terms:
     - BRCA2
     - Breast cancer type 2 susceptibility protein
     - BRCA 2
-    - PARP inhibitor
-    - platinum sensitivity
     requires_context: false
 - id: atm
   name: ATM
@@ -719,7 +701,6 @@ targets:
     - BRAF非V600突变
     drug_or_class:
     - BRAF inhibitor
-    - MEK inhibitor
     - dabrafenib
     - trametinib
     - BRAF/MEK combination
@@ -731,7 +712,6 @@ targets:
     - BRAF non-V600
     - BRAF fusion
     - BRAF inhibitor
-    - MEK inhibitor
     - dabrafenib
     - trametinib
     - BRAF/MEK combination
@@ -1251,18 +1231,12 @@ targets:
     - mesothelin ADC
     - mesothelin CAR-T
     - mesothelin bispecific
-    - ADC
-    - CAR-T
-    - bispecific antibody
     trial_query_terms:
     - MSLN
     - Mesothelin
     - mesothelin ADC
     - mesothelin CAR-T
     - mesothelin bispecific
-    - ADC
-    - CAR-T
-    - bispecific antibody
     requires_context: false
 - id: b7h3
   name: CD276
@@ -1310,10 +1284,6 @@ targets:
     - B7-H3 ADC
     - B7-H3 CAR-T
     - B7-H3 bispecific
-    - ADC
-    - CAR-T
-    - bispecific antibody
-    - radioimmunotherapy
     trial_query_terms:
     - CD276
     - B7-H3
@@ -1322,10 +1292,6 @@ targets:
     - B7-H3 ADC
     - B7-H3 CAR-T
     - B7-H3 bispecific
-    - ADC
-    - CAR-T
-    - bispecific antibody
-    - radioimmunotherapy
     requires_context: false
 - id: nectin4
   name: NECTIN4
@@ -1368,14 +1334,12 @@ targets:
     drug_or_class:
     - Nectin-4 ADC
     - enfortumab vedotin
-    - ADC
     trial_query_terms:
     - NECTIN4
     - Nectin-4
     - PVRL4
     - Nectin-4 ADC
     - enfortumab vedotin
-    - ADC
     requires_context: false
 - id: pan_trk
   name: NTRK1/2/3
@@ -1510,9 +1474,6 @@ targets:
     - CDH17 ADC
     - CDH17 CAR-T
     - CDH17 bispecific
-    - ADC
-    - CAR-T
-    - bispecific antibody
     trial_query_terms:
     - CDH17
     - Cadherin-17
@@ -1521,9 +1482,6 @@ targets:
     - CDH17 ADC
     - CDH17 CAR-T
     - CDH17 bispecific
-    - ADC
-    - CAR-T
-    - bispecific antibody
     requires_context: false
 - id: ceacam5
   name: CEACAM5
@@ -1573,9 +1531,6 @@ targets:
     - CEA CAR-T
     - CEACAM5 ADC
     - CEA bispecific
-    - ADC
-    - bispecific antibody
-    - CAR-T
     trial_query_terms:
     - CEACAM5
     - CEA
@@ -1584,9 +1539,6 @@ targets:
     - CEA CAR-T
     - CEACAM5 ADC
     - CEA bispecific
-    - ADC
-    - bispecific antibody
-    - CAR-T
     requires_context: true
 - id: mtap
   name: MTAP
@@ -1714,9 +1666,6 @@ targets:
     - MUC1 ADC
     - MUC1 CAR-T
     - MUC1 vaccine
-    - ADC
-    - CAR-T
-    - vaccine
     trial_query_terms:
     - MUC1
     - Mucin 1
@@ -1726,9 +1675,6 @@ targets:
     - MUC1 ADC
     - MUC1 CAR-T
     - MUC1 vaccine
-    - ADC
-    - CAR-T
-    - vaccine
     requires_context: false
 - id: folr1
   name: FOLR1
@@ -1776,7 +1722,6 @@ targets:
     drug_or_class:
     - FOLR1 ADC
     - FRalpha ADC
-    - ADC
     trial_query_terms:
     - FOLR1
     - Folate receptor alpha
@@ -1785,7 +1730,6 @@ targets:
     - FRalpha
     - FOLR1 ADC
     - FRalpha ADC
-    - ADC
     requires_context: true
 - id: dll3
   name: DLL3
@@ -1829,9 +1773,7 @@ targets:
     - DLL3 ADC
     - DLL3 bispecific
     - DLL3 CAR-T
-    - ADC
     - bispecific T-cell engager
-    - CAR-T
     trial_query_terms:
     - DLL3
     - Delta-like ligand 3
@@ -1839,9 +1781,7 @@ targets:
     - DLL3 ADC
     - DLL3 bispecific
     - DLL3 CAR-T
-    - ADC
     - bispecific T-cell engager
-    - CAR-T
     requires_context: false
 - id: ca125
   name: MUC16
@@ -1890,9 +1830,6 @@ targets:
     - MUC16 ADC
     - MUC16 CAR-T
     - MUC16 bispecific
-    - ADC
-    - CAR-T
-    - bispecific antibody
     trial_query_terms:
     - MUC16
     - CA125
@@ -1901,9 +1838,6 @@ targets:
     - MUC16 ADC
     - MUC16 CAR-T
     - MUC16 bispecific
-    - ADC
-    - CAR-T
-    - bispecific antibody
     requires_context: false
 - id: immune
   name: Immunotherapy
@@ -1960,7 +1894,6 @@ targets:
     - PD-1 inhibitor
     - PD-L1 inhibitor
     - CTLA-4 inhibitor
-    - immune checkpoint inhibitor
     - ICI
     trial_query_terms:
     - IMMUNOTHERAPY
@@ -1973,7 +1906,6 @@ targets:
     - PD-1 inhibitor
     - PD-L1 inhibitor
     - CTLA-4 inhibitor
-    - immune checkpoint inhibitor
     - ICI
     requires_context: true
 - id: palb2
@@ -2015,14 +1947,10 @@ targets:
     - PALB2胚系突变
     - PALB2体细胞突变
     - PALB2致病突变
-    drug_or_class:
-    - PARP inhibitor
-    - platinum sensitivity
+    drug_or_class: []
     trial_query_terms:
     - PALB2
     - Partner and localizer of BRCA2
-    - PARP inhibitor
-    - platinum sensitivity
     requires_context: false
 - id: msi_mmr
   name: MSI-H/dMMR
@@ -2090,7 +2018,6 @@ targets:
     - 错配修复缺陷
     - MMR蛋白缺失
     drug_or_class:
-    - immune checkpoint inhibitor
     - PD-1 inhibitor
     - pembrolizumab
     trial_query_terms:
@@ -2107,7 +2034,6 @@ targets:
     - PMS2
     - MSI-high
     - MMR deficient
-    - immune checkpoint inhibitor
     - PD-1 inhibitor
     - pembrolizumab
     requires_context: false
@@ -2159,17 +2085,13 @@ targets:
     - BRCA2
     - BRCA 1/2
     zh: []
-    drug_or_class:
-    - platinum sensitivity
-    - PARP inhibitor
+    drug_or_class: []
     trial_query_terms:
     - BRCA
     - BRCA1/2
     - BRCA1
     - BRCA2
     - BRCA 1/2
-    - platinum sensitivity
-    - PARP inhibitor
     requires_context: false
 - id: alk
   name: ALK
