@@ -1,207 +1,3186 @@
-# 胰腺癌临床检索靶点配置（可复用）
-# ============================================================
-# 用途：
-#   - 本项目 ClinicalTrials.gov 抓取默认 KEYWORDS 来源
-#   - 其它项目（月报/RAG/技能包）可直接复制或软链接复用
-#
-# 优先级建议：
-#   1) 环境变量 KEYWORDS（逗号分隔，若设置则覆盖本文件默认展开）
-#   2) 本 YAML 的 targets[*].keywords / aliases
-#
-# 分组：
-#   core  = 通用监测（驱动突变 / 免疫 / DDR 等）
-#   A     = 指南/热点实体瘤靶点
-#   B     = 进阶实体瘤靶点
-#   C     = 白片足够时可补测靶点
-#
-# 字段说明：
-#   id          稳定标识（程序用）
-#   name        展示名
-#   group       core | A | B | C
-#   aliases     文献/登记库常见写法（含同义基因符号）
-#   keywords    写入 query.term 的检索词（默认 = aliases）
-#   cn_name     中文名（可选）
-#   note        备注（可选）
-# ============================================================
+# 胰腺癌靶点配置（融合增强版）
+# 由 scripts/fuse_pdac_targets.py 生成；可手工微调后重跑融合。
+# 运行时兼容 lib/targets.py：targets[].id/name/group/aliases/keywords
 
-version: 1
-disease: "Pancreatic Cancer"
-updated: "2026-07-18"
-
-# 默认展开哪些分组生成 KEYWORDS（可被代码覆盖）
-default_groups: [core, A, B, C]
-
+schema_version: '2.1'
+version: 2
+disease: Pancreatic Cancer
+disease_meta:
+  name_zh: 胰腺导管腺癌
+  name_en: Pancreatic ductal adenocarcinoma
+  abbreviation: PDAC
+updated: '2026-07-18'
+purpose:
+- 临床试验检索关键词来源
+- ClinicalTrials.gov、ChiCTR、医院公众号/小程序及论文的靶点词归一化
+- 患者分子标志物结构化与自动提取
+- 靶点、同义词、药物类别及通路标签标准化
+source_note: 融合 pdac_targets_search_v2.yaml + clinicaltrials-search/genes.yaml + 本仓库 runtime 分组。默认 KEYWORDS
+  仅展开 default_groups；单一靶点可用 search_terms 增强召回。
+knowledge_source: /Users/qinxiaoqiang/Downloads/clinicaltrials推送和订阅/assets/pdac_targets_search_v2.yaml
+normalization_rules:
+  case_insensitive: true
+  strip_punctuation: true
+  normalize_hyphen_space: true
+  gene_symbol_is_canonical: true
+  protein_and_pathway_terms_may_map_to_gene_or_biomarker: true
+priority_tiers:
+  core: 指南/共识明确建议检测，或具有较成熟的肿瘤泛癌/PDAC治疗路径
+  A: 用户定义A组；PDAC临床开发活跃且有较明确试验价值
+  B: 用户定义B组；具有明确临床试验匹配价值
+  C: 用户定义C组；早期ADC、CAR-T、双抗或其他探索方向
+  emerging: 近年临床研究活跃，适合扩大召回；不可视为常规推荐
+  exploratory: 早期转化或篮子试验方向，仅用于宽召回和情报监测
+  context: 非单一可用药靶点，但对分型、免疫、DDR、预后或试验筛选重要
+default_groups:
+- core
+- A
+- B
+- C
 groups:
   core:
     name: 通用监测
     description: 驱动突变 / 免疫 / DDR 等常监测项
   A:
     name: 指南与热点靶点
-    description: EGFR / MET / HER2 / TROP2 / CLDN18.2 / TF 等
+    description: 指南推荐 + 临床热点（含 SHP2/TF/MET 等）
   B:
     name: 进阶实体瘤靶点
-    description: MSLN / B7-H3 / Nectin-4 / pan-TRK / CDH17 / CEACAM5 / MTAP
+    description: ADC/CAR-T/融合等进阶靶点
   C:
     name: 补测靶点
-    description: 白片足够时可考虑补测：MUC1 / FOLR1 / DLL3 / CA125
-
+    description: 白片足够时可考虑补测
+  knowledge:
+    name: 知识层扩展
+    description: emerging/exploratory 等，默认不进入 KEYWORDS，供匹配与情报扩展
+retrieval_profiles:
+  default:
+    groups:
+    - core
+    - A
+    - B
+    - C
+    use_fields:
+    - keywords
+    note: 日常推送/抓取，控制 OR 词数量
+  single_target:
+    groups:
+    - core
+    - A
+    - B
+    - C
+    - knowledge
+    use_fields:
+    - keywords
+    - search_terms.exact
+    - search_terms.zh
+    - search_terms.drug_or_class
+    note: 菜单单一靶点 / --target，扩大别名与药物词
+  wide_monitor:
+    groups:
+    - core
+    - A
+    - B
+    - C
+    - knowledge
+    use_fields:
+    - keywords
+    - search_terms.trial_query_terms
+    note: 宽监测；可能过召回，慎用
 targets:
-  # ---------- core ----------
-  - id: kras
-    name: KRAS
-    group: core
-    aliases: [KRAS]
-    keywords: [KRAS]
-    cn_name: KRAS 癌基因
-
-  - id: immune
-    name: Immunotherapy
-    group: core
-    aliases: [Immune, Immunotherapy, 免疫, 免疫治疗]
-    keywords: [Immune, Immunotherapy, 免疫, 免疫治疗]
-    cn_name: 免疫治疗
-
-  - id: tp53
-    name: TP53
-    group: core
-    aliases: [TP53]
-    keywords: [TP53]
-    cn_name: TP53
-
-  - id: atm
-    name: ATM
-    group: core
-    aliases: [ATM]
-    keywords: [ATM]
-    cn_name: ATM
-
-  - id: brca
-    name: BRCA
-    group: core
-    aliases: [BRCA, BRCA1, BRCA2]
-    keywords: [BRCA]
-    cn_name: BRCA1/2
-
-  # ---------- A 指南/热点 ----------
-  - id: egfr
-    name: EGFR
-    group: A
-    aliases: [EGFR, ERBB1]
-    keywords: [EGFR]
-    cn_name: 表皮生长因子受体
-
-  - id: met
-    name: C-MET (MET)
-    group: A
-    aliases: [MET, C-MET, c-Met]
-    keywords: [MET, C-MET, c-Met]
-    cn_name: 间充质上皮转化因子
-
-  - id: her2
-    name: HER2 (ERBB2)
-    group: A
-    aliases: [HER2, ERBB2]
-    keywords: [HER2, ERBB2]
-    cn_name: 人表皮生长因子受体2
-
-  - id: trop2
-    name: TROP2
-    group: A
-    aliases: [TROP2, TACSTD2]
-    keywords: [TROP2, TACSTD2]
-    cn_name: 滋养细胞表面抗原2
-
-  - id: cldn18_2
-    name: CLDN18.2
-    group: A
-    aliases: [CLDN18.2, Claudin 18.2, Claudin18.2, CLDN18]
-    keywords: [CLDN18.2, Claudin 18.2, Claudin18.2]
-    cn_name: 紧密连接蛋白18.2
-
-  - id: tf
-    name: Tissue Factor (TF)
-    group: A
-    aliases: [TF, Tissue Factor, F3]
-    keywords: [TF, Tissue Factor]
-    cn_name: 组织因子
-
-  # ---------- B 进阶实体瘤 ----------
-  - id: msln
-    name: MSLN (Mesothelin)
-    group: B
-    aliases: [MSLN, Mesothelin]
-    keywords: [MSLN, Mesothelin]
-    cn_name: 间皮素
-
-  - id: b7h3
-    name: B7-H3 (CD276)
-    group: B
-    aliases: [B7-H3, B7H3, CD276]
-    keywords: [B7H3, B7-H3, CD276]
-    cn_name: B7同源体3
-
-  - id: nectin4
-    name: Nectin-4
-    group: B
-    aliases: [Nectin-4, NECTIN4, PVRL4]
-    keywords: [Nectin-4, NECTIN4, PVRL4]
-    cn_name: 连接蛋白4
-
-  - id: pan_trk
-    name: pan-TRK (NTRK)
-    group: B
-    aliases: [pan-TRK, NTRK, NTRK1, NTRK2, NTRK3]
-    keywords: [NTRK, pan-TRK]
-    cn_name: 泛TRK / NTRK
-
-  - id: cdh17
-    name: CDH17
-    group: B
-    aliases: [CDH17, Cadherin-17]
-    keywords: [CDH17]
-    cn_name: 钙黏蛋白17
-
-  - id: ceacam5
-    name: CEACAM5
-    group: B
-    aliases: [CEACAM5, CEA]
-    keywords: [CEACAM5, CEA]
-    cn_name: 癌胚抗原相关细胞黏附分子5
-    note: CEA-related
-
-  - id: mtap
-    name: MTAP (loss)
-    group: B
-    aliases: [MTAP, MTAP loss, MTAP deletion]
-    keywords: [MTAP]
-    cn_name: 甲硫腺苷磷酸化酶（缺失）
-    note: IHC for loss
-
-  # ---------- C 补测 ----------
-  - id: muc1
-    name: MUC1
-    group: C
-    aliases: [MUC1, Mucin 1]
-    keywords: [MUC1]
-    cn_name: 黏蛋白1
-
-  - id: folr1
-    name: FOLR1
-    group: C
-    aliases: [FOLR1, Folate receptor alpha, Folate receptor]
-    keywords: [FOLR1, Folate receptor]
-    cn_name: 叶酸受体α
-
-  - id: dll3
-    name: DLL3
-    group: C
-    aliases: [DLL3]
-    keywords: [DLL3]
-    cn_name: Delta-like ligand 3
-
-  - id: ca125
-    name: CA125 (MUC16)
-    group: C
-    aliases: [CA125, MUC16]
-    keywords: [CA125, MUC16]
-    cn_name: CA125 / MUC16
+- id: egfr
+  name: EGFR
+  group: A
+  tier: A
+  type: gene_protein
+  aliases:
+  - EGFR
+  - ERBB1
+  - HER1
+  keywords:
+  - EGFR
+  - ERBB1
+  - HER1
+  cn_name: 表皮生长因子受体
+  cn_desc: 促进细胞增殖的受体，靶向药有厄洛替尼等
+  report: false
+  nccn_section: 靶点治疗
+  category: guideline
+  pdac_id: EGFR
+  canonical: EGFR
+  alterations:
+  - overexpression
+  - amplification
+  - activating mutation
+  pathway: []
+  clinical_tags:
+  - EGFR antibody
+  - EGFR TKI
+  recommended_detection:
+  - IHC
+  - DNA NGS
+  - FISH/ISH
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - EGFR
+    - ERBB1
+    - HER1
+    - epidermal growth factor receptor
+    zh:
+    - 表皮生长因子受体
+    - EGFR阳性
+    - EGFR扩增
+    drug_or_class:
+    - EGFR inhibitor
+    - EGFR antibody
+    - cetuximab
+    - panitumumab
+    - nimotuzumab
+    - EGFR TKI
+    trial_query_terms:
+    - EGFR
+    - ERBB1
+    - HER1
+    - epidermal growth factor receptor
+    - EGFR inhibitor
+    - EGFR antibody
+    - cetuximab
+    - panitumumab
+    - nimotuzumab
+    - EGFR TKI
+    requires_context: false
+- id: kras
+  name: KRAS
+  group: core
+  tier: core
+  type: gene
+  aliases:
+  - KRAS G12D
+  - KRAS G12V
+  - KRAS G12C
+  - KRAS G12R
+  - KRAS G12A
+  - KRAS G13D
+  - KRAS Q61H
+  - KRAS
+  - K-RAS
+  - Kirsten rat sarcoma viral oncogene
+  - RAS
+  keywords:
+  - KRAS
+  - K-RAS
+  - Kirsten rat sarcoma viral oncogene
+  - KRAS wild type
+  - KRAS wild-type
+  - KRAS WT
+  - KRAS G12D
+  - KRAS G12V
+  - KRAS G12C
+  - KRAS G12R
+  - KRAS G12A
+  - KRAS G13D
+  cn_name: KRAS 癌基因
+  cn_desc: 胰腺癌最常见的驱动突变（>90%），G12D/G12V 是主要亚型
+  report: true
+  nccn_section: 靶点治疗
+  category: guideline
+  pdac_id: KRAS
+  canonical: KRAS
+  alterations:
+  - wild_type
+  - G12D
+  - G12V
+  - G12R
+  - G12C
+  - G12S
+  - G12A
+  - G13C
+  - G13D
+  - Q61H
+  - Q61L
+  - Q61R
+  - other_activating_mutation
+  pathway: []
+  clinical_tags:
+  - KRAS wild-type pathway
+  - KRAS G12C inhibitor
+  - KRAS G12D inhibitor
+  - pan-RAS inhibitor
+  - pan-KRAS inhibitor
+  recommended_detection:
+  - DNA NGS
+  - ARMS-PCR
+  - Sanger sequencing
+  source_tags:
+  - user_original
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - KRAS
+    - K-RAS
+    - Kirsten rat sarcoma viral oncogene
+    - RAS
+    - KRAS wild type
+    - KRAS wild-type
+    - KRAS WT
+    - KRAS G12D
+    - KRAS G12V
+    - KRAS G12R
+    - KRAS G12C
+    - KRAS G12X
+    - pan-KRAS
+    - pan-RAS
+    - RAS(ON)
+    - RAS ON
+    zh:
+    - KRAS野生型
+    - KRAS突变
+    - KRAS G12D突变
+    - KRAS G12C突变
+    - 泛KRAS
+    - 泛RAS
+    drug_or_class:
+    - KRAS inhibitor
+    - RAS inhibitor
+    - daraxonrasib
+    - RMC-6236
+    - RMC-9805
+    - MRTX1133
+    - sotorasib
+    - adagrasib
+    - divarasib
+    - olomorasib
+    - KRAS wild-type pathway
+    - KRAS G12C inhibitor
+    - KRAS G12D inhibitor
+    - pan-RAS inhibitor
+    - pan-KRAS inhibitor
+    trial_query_terms:
+    - KRAS
+    - K-RAS
+    - Kirsten rat sarcoma viral oncogene
+    - RAS
+    - KRAS wild type
+    - KRAS wild-type
+    - KRAS WT
+    - KRAS G12D
+    - KRAS G12V
+    - KRAS G12R
+    - KRAS G12C
+    - KRAS G12X
+    - pan-KRAS
+    - pan-RAS
+    - RAS(ON)
+    - RAS ON
+    - KRAS inhibitor
+    - RAS inhibitor
+    - daraxonrasib
+    - RMC-6236
+    - RMC-9805
+    - MRTX1133
+    - sotorasib
+    - adagrasib
+    - divarasib
+    - olomorasib
+    - KRAS wild-type pathway
+    - KRAS G12C inhibitor
+    - KRAS G12D inhibitor
+    - pan-RAS inhibitor
+    - pan-KRAS inhibitor
+    requires_context: true
+- id: erbb2
+  name: ERBB2
+  group: A
+  tier: core
+  type: gene_protein
+  aliases:
+  - HER2
+  - ERBB2
+  - HER-2
+  - ERBB-2
+  keywords:
+  - ERBB2
+  - HER2
+  - HER-2
+  - ERBB-2
+  - HER 2
+  cn_name: 人表皮生长因子受体2
+  cn_desc: 约5-10%胰腺癌过表达，可用曲妥珠单抗等
+  report: true
+  nccn_section: 靶点治疗
+  category: guideline
+  pdac_id: ERBB2
+  canonical: ERBB2
+  alterations:
+  - amplification
+  - overexpression
+  - activating mutation
+  pathway: []
+  clinical_tags:
+  - HER2 ADC
+  - HER2 antibody
+  - HER2 TKI
+  recommended_detection:
+  - IHC
+  - FISH/ISH
+  - DNA NGS
+  source_tags:
+  - user_original
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - ERBB2
+    - HER2
+    - HER-2
+    - ERBB-2
+    - HER 2
+    zh:
+    - HER2阳性
+    - HER2扩增
+    - HER2过表达
+    - ERBB2扩增
+    drug_or_class:
+    - HER2 ADC
+    - anti-HER2
+    - trastuzumab deruxtecan
+    - T-DXd
+    - trastuzumab
+    - HER2 antibody
+    - HER2 TKI
+    trial_query_terms:
+    - ERBB2
+    - HER2
+    - HER-2
+    - ERBB-2
+    - HER 2
+    - HER2 ADC
+    - anti-HER2
+    - trastuzumab deruxtecan
+    - T-DXd
+    - trastuzumab
+    - HER2 antibody
+    - HER2 TKI
+    requires_context: false
+- id: trop2
+  name: TACSTD2
+  group: A
+  tier: A
+  type: gene_protein
+  aliases:
+  - TROP2
+  - TACSTD2
+  - TROP-2
+  - Trophoblast cell surface antigen 2
+  keywords:
+  - TACSTD2
+  - TROP2
+  - TROP-2
+  - Trophoblast cell surface antigen 2
+  - TROP 2
+  - sacituzumab
+  cn_name: 滋养细胞表面抗原2
+  cn_desc: ADC药物热门靶点，如 Sacituzumab govitecan
+  report: true
+  nccn_section: ADC药物靶点
+  category: guideline
+  pdac_id: TACSTD2
+  canonical: TACSTD2
+  alterations:
+  - protein_overexpression
+  pathway: []
+  clinical_tags:
+  - TROP2 ADC
+  recommended_detection:
+  - IHC
+  source_tags:
+  - user_original
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - TACSTD2
+    - TROP2
+    - TROP-2
+    - Trophoblast cell surface antigen 2
+    - TROP 2
+    zh:
+    - 滋养层细胞表面抗原2
+    - TROP2阳性
+    - TROP2高表达
+    drug_or_class:
+    - TROP2 ADC
+    - sacituzumab govitecan
+    - SG
+    - datopotamab deruxtecan
+    - Dato-DXd
+    trial_query_terms:
+    - TACSTD2
+    - TROP2
+    - TROP-2
+    - Trophoblast cell surface antigen 2
+    - TROP 2
+    - TROP2 ADC
+    - sacituzumab govitecan
+    - SG
+    - datopotamab deruxtecan
+    - Dato-DXd
+    requires_context: false
+- id: claudin18_2
+  name: CLDN18.2
+  group: A
+  tier: core
+  type: protein_isoform
+  aliases:
+  - CLDN18.2
+  - Claudin 18.2
+  - CLDN18
+  - Claudin18.2
+  - Claudin-18.2
+  keywords:
+  - CLDN18.2
+  - Claudin 18.2
+  - Claudin18.2
+  - Claudin-18.2
+  - CLDN18
+  - CLDN18 2
+  - zolbetuximab
+  cn_name: 紧密连接蛋白18.2
+  cn_desc: 胰腺癌高表达靶点，Zolbetuximab 已获批
+  report: true
+  nccn_section: 靶点治疗
+  category: guideline
+  pdac_id: CLDN18
+  canonical: CLDN18.2
+  alterations:
+  - protein_expression
+  pathway: []
+  clinical_tags:
+  - monoclonal antibody
+  - bispecific antibody
+  - ADC
+  - CAR-T
+  recommended_detection:
+  - IHC
+  source_tags:
+  - user_original
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - CLDN18
+    - CLDN18.2
+    - Claudin 18.2
+    - Claudin18.2
+    - Claudin-18.2
+    - CLDN18 2
+    zh:
+    - 紧密连接蛋白18.2
+    - CLDN18.2阳性
+    - CLDN18.2高表达
+    drug_or_class:
+    - CLDN18.2 ADC
+    - CLDN18.2 CAR-T
+    - CLDN18.2 bispecific
+    - zolbetuximab
+    - CT041
+    - satri-cel
+    - IBI389
+    - IBI343
+    - CMG901
+    - monoclonal antibody
+    - bispecific antibody
+    - ADC
+    - CAR-T
+    trial_query_terms:
+    - CLDN18
+    - CLDN18.2
+    - Claudin 18.2
+    - Claudin18.2
+    - Claudin-18.2
+    - CLDN18 2
+    - CLDN18.2 ADC
+    - CLDN18.2 CAR-T
+    - CLDN18.2 bispecific
+    - zolbetuximab
+    - CT041
+    - satri-cel
+    - IBI389
+    - IBI343
+    - CMG901
+    - monoclonal antibody
+    - bispecific antibody
+    - ADC
+    - CAR-T
+    requires_context: false
+- id: brca1
+  name: BRCA1
+  group: core
+  tier: core
+  type: gene
+  aliases:
+  - BRCA1
+  - Breast cancer type 1 susceptibility protein
+  keywords:
+  - BRCA1
+  - Breast cancer type 1 susceptibility protein
+  - BRCA 1
+  - BRCA mutation
+  cn_name: 乳腺癌易感基因1
+  cn_desc: 同源重组修复基因，可用 PARP 抑制剂（奥拉帕利）
+  report: true
+  nccn_section: DNA损伤修复
+  category: guideline
+  pdac_id: BRCA1
+  canonical: BRCA1
+  alterations:
+  - germline_pathogenic_variant
+  - somatic_pathogenic_variant
+  - biallelic_loss
+  pathway:
+  - DDR
+  - HRR
+  clinical_tags: []
+  recommended_detection:
+  - germline NGS
+  - tumor DNA NGS
+  source_tags:
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - BRCA1
+    - Breast cancer type 1 susceptibility protein
+    - BRCA 1
+    zh:
+    - BRCA1胚系突变
+    - BRCA1体细胞突变
+    - BRCA1致病突变
+    drug_or_class:
+    - PARP inhibitor
+    - platinum sensitivity
+    trial_query_terms:
+    - BRCA1
+    - Breast cancer type 1 susceptibility protein
+    - BRCA 1
+    - PARP inhibitor
+    - platinum sensitivity
+    requires_context: false
+- id: brca2
+  name: BRCA2
+  group: core
+  tier: core
+  type: gene
+  aliases:
+  - BRCA2
+  - Breast cancer type 2 susceptibility protein
+  keywords:
+  - BRCA2
+  - Breast cancer type 2 susceptibility protein
+  - BRCA 2
+  - BRCA mutation
+  cn_name: 乳腺癌易感基因2
+  cn_desc: 胰腺癌胚系突变最常见 DDR 基因，PARP 抑制剂适用
+  report: true
+  nccn_section: DNA损伤修复
+  category: guideline
+  pdac_id: BRCA2
+  canonical: BRCA2
+  alterations:
+  - germline_pathogenic_variant
+  - somatic_pathogenic_variant
+  - biallelic_loss
+  pathway:
+  - DDR
+  - HRR
+  clinical_tags: []
+  recommended_detection:
+  - germline NGS
+  - tumor DNA NGS
+  source_tags:
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - BRCA2
+    - Breast cancer type 2 susceptibility protein
+    - BRCA 2
+    zh:
+    - BRCA2胚系突变
+    - BRCA2体细胞突变
+    - BRCA2致病突变
+    drug_or_class:
+    - PARP inhibitor
+    - platinum sensitivity
+    trial_query_terms:
+    - BRCA2
+    - Breast cancer type 2 susceptibility protein
+    - BRCA 2
+    - PARP inhibitor
+    - platinum sensitivity
+    requires_context: false
+- id: atm
+  name: ATM
+  group: core
+  tier: core
+  type: gene
+  aliases:
+  - ATM
+  - Ataxia telangiectasia mutated
+  keywords:
+  - ATM
+  - Ataxia telangiectasia mutated
+  - ATM mutation
+  - ATM deficiency
+  cn_name: ATM丝氨酸/苏氨酸激酶
+  cn_desc: DDR 通路基因，合成致死策略（ATR抑制剂）靶点
+  report: false
+  nccn_section: DNA损伤修复
+  category: guideline
+  pdac_id: ATM
+  canonical: ATM
+  alterations:
+  - pathogenic_variant
+  - loss_of_function
+  - protein_loss
+  pathway:
+  - DDR
+  - HRR
+  clinical_tags: []
+  recommended_detection:
+  - DNA NGS
+  - IHC as supportive evidence
+  source_tags:
+  - user_original
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - ATM
+    - Ataxia telangiectasia mutated
+    zh:
+    - ATM突变
+    - ATM缺失
+    - ATM蛋白缺失
+    drug_or_class: []
+    trial_query_terms:
+    - ATM
+    - Ataxia telangiectasia mutated
+    requires_context: true
+- id: braf
+  name: BRAF
+  group: A
+  tier: core
+  type: gene
+  aliases:
+  - BRAF V600E
+  - BRAF
+  - B-RAF
+  keywords:
+  - BRAF
+  - B-RAF
+  - BRAF V600E
+  - BRAF V600K
+  - BRAF non-V600
+  - BRAF fusion
+  cn_name: BRAF V600E突变
+  cn_desc: 可用达拉非尼+曲美替尼联合方案
+  report: false
+  nccn_section: 靶点治疗
+  category: guideline
+  pdac_id: BRAF
+  canonical: BRAF
+  alterations:
+  - V600E
+  - V600K
+  - V600D
+  - non-V600 mutation
+  - fusion
+  - rearrangement
+  pathway: []
+  clinical_tags:
+  - BRAF inhibitor
+  - BRAF/MEK combination
+  recommended_detection:
+  - DNA NGS
+  - RNA NGS
+  - RT-PCR
+  - FISH
+  - IHC for V600E
+  source_tags:
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - BRAF
+    - B-RAF
+    - BRAF V600E
+    - BRAF V600K
+    - BRAF non-V600
+    - BRAF fusion
+    zh:
+    - BRAF V600E突变
+    - BRAF融合
+    - BRAF非V600突变
+    drug_or_class:
+    - BRAF inhibitor
+    - MEK inhibitor
+    - dabrafenib
+    - trametinib
+    - BRAF/MEK combination
+    trial_query_terms:
+    - BRAF
+    - B-RAF
+    - BRAF V600E
+    - BRAF V600K
+    - BRAF non-V600
+    - BRAF fusion
+    - BRAF inhibitor
+    - MEK inhibitor
+    - dabrafenib
+    - trametinib
+    - BRAF/MEK combination
+    requires_context: false
+- id: ntrk
+  name: NTRK1/2/3
+  group: A
+  tier: core
+  type: gene_family
+  aliases:
+  - NTRK1
+  - NTRK2
+  - NTRK3
+  - NTRK fusion
+  - NTRK
+  - pan-TRK
+  - TRKA
+  - TRKB
+  - TRKC
+  keywords:
+  - NTRK1/2/3
+  - NTRK
+  - pan-TRK
+  - TRKA
+  - TRKB
+  - TRKC
+  - NTRK1
+  - NTRK2
+  - NTRK3
+  - NTRK fusion
+  - larotrectinib
+  - entrectinib
+  cn_name: 神经营养因子受体酪氨酸激酶
+  cn_desc: 融合基因，可用拉罗替尼/恩曲替尼
+  report: false
+  nccn_section: 靶点治疗
+  category: guideline
+  pdac_id: NTRK
+  canonical: NTRK1/2/3
+  alterations:
+  - fusion
+  - rearrangement
+  pathway: []
+  clinical_tags:
+  - TRK inhibitor
+  recommended_detection:
+  - RNA NGS preferred
+  - DNA NGS
+  - pan-TRK IHC as screening
+  - FISH
+  - RT-PCR
+  source_tags:
+  - user_original
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - NTRK
+    - NTRK1/2/3
+    - pan-TRK
+    - TRKA
+    - TRKB
+    - TRKC
+    - NTRK1
+    - NTRK2
+    - NTRK3
+    - pan TRK
+    - NTRK fusion
+    - NTRK rearrangement
+    zh:
+    - NTRK融合
+    - NTRK重排
+    - 泛TRK
+    drug_or_class:
+    - TRK inhibitor
+    - larotrectinib
+    - entrectinib
+    - repotrectinib
+    - selitrectinib
+    trial_query_terms:
+    - NTRK
+    - NTRK1/2/3
+    - pan-TRK
+    - TRKA
+    - TRKB
+    - TRKC
+    - NTRK1
+    - NTRK2
+    - NTRK3
+    - pan TRK
+    - NTRK fusion
+    - NTRK rearrangement
+    - TRK inhibitor
+    - larotrectinib
+    - entrectinib
+    - repotrectinib
+    - selitrectinib
+    requires_context: false
+- id: nrg1
+  name: NRG1
+  group: A
+  tier: core
+  type: gene
+  aliases:
+  - NRG1
+  - NRG1 fusion
+  - Neuregulin 1
+  keywords:
+  - NRG1
+  - Neuregulin 1
+  - NRG1 fusion
+  - NRG1 rearrangement
+  - zenocutuzumab
+  cn_name: 神经调节蛋白1
+  cn_desc: 融合基因，Zenocutuzumab 在研
+  report: false
+  nccn_section: 靶点治疗
+  category: guideline
+  pdac_id: NRG1
+  canonical: NRG1
+  alterations:
+  - fusion
+  - rearrangement
+  pathway: []
+  clinical_tags:
+  - HER2/HER3 bispecific antibody
+  - HER3-directed therapy
+  recommended_detection:
+  - RNA NGS preferred
+  - DNA NGS
+  - RT-PCR
+  - FISH
+  source_tags:
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - NRG1
+    - Neuregulin 1
+    - NRG1 fusion
+    - NRG1 rearrangement
+    zh:
+    - NRG1融合
+    - 神经调节蛋白1融合
+    drug_or_class:
+    - HER2 HER3 bispecific
+    - zenocutuzumab
+    - seribantumab
+    - HER3 antibody
+    - HER2/HER3 bispecific antibody
+    - HER3-directed therapy
+    trial_query_terms:
+    - NRG1
+    - Neuregulin 1
+    - NRG1 fusion
+    - NRG1 rearrangement
+    - HER2 HER3 bispecific
+    - zenocutuzumab
+    - seribantumab
+    - HER3 antibody
+    - HER2/HER3 bispecific antibody
+    - HER3-directed therapy
+    requires_context: false
+- id: ret
+  name: RET
+  group: A
+  tier: core
+  type: gene
+  aliases:
+  - RET
+  - RET proto-oncogene
+  keywords:
+  - RET
+  - RET proto-oncogene
+  - RET fusion
+  - RET rearrangement
+  - RET alteration
+  - selpercatinib
+  cn_name: RET原癌基因
+  cn_desc: 融合基因，可用塞普替尼
+  report: false
+  nccn_section: 靶点治疗
+  category: guideline
+  pdac_id: RET
+  canonical: RET
+  alterations:
+  - fusion
+  - rearrangement
+  - activating mutation
+  pathway: []
+  clinical_tags:
+  - RET inhibitor
+  recommended_detection:
+  - RNA NGS preferred
+  - DNA NGS
+  - RT-PCR
+  - FISH
+  source_tags:
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - RET
+    - RET proto-oncogene
+    - RET fusion
+    - RET rearrangement
+    - RET alteration
+    zh:
+    - RET融合
+    - RET重排
+    drug_or_class:
+    - RET inhibitor
+    - selpercatinib
+    - pralsetinib
+    trial_query_terms:
+    - RET
+    - RET proto-oncogene
+    - RET fusion
+    - RET rearrangement
+    - RET alteration
+    - RET inhibitor
+    - selpercatinib
+    - pralsetinib
+    requires_context: true
+- id: fgfr
+  name: FGFR1/2/3/4
+  group: A
+  tier: core
+  type: gene_family
+  aliases:
+  - FGFR1
+  - FGFR2
+  - FGFR3
+  - FGFR4
+  - FGFR
+  - Fibroblast growth factor receptor
+  keywords:
+  - FGFR1/2/3/4
+  - FGFR
+  - Fibroblast growth factor receptor
+  - FGFR1
+  - FGFR2
+  - FGFR3
+  - FGFR4
+  - FGFR fusion
+  - FGFR2 fusion
+  - futibatinib
+  - pemigatinib
+  cn_name: 成纤维细胞生长因子受体
+  cn_desc: 融合/突变，可用佩米替尼等
+  report: false
+  nccn_section: 靶点治疗
+  category: guideline
+  pdac_id: FGFR
+  canonical: FGFR1/2/3/4
+  alterations:
+  - fusion
+  - rearrangement
+  - amplification
+  - activating mutation
+  pathway: []
+  clinical_tags:
+  - FGFR inhibitor
+  recommended_detection:
+  - DNA NGS
+  - RNA NGS
+  - FISH
+  - RT-PCR
+  source_tags:
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - FGFR
+    - FGFR1/2/3/4
+    - Fibroblast growth factor receptor
+    - FGFR1
+    - FGFR2
+    - FGFR3
+    - FGFR4
+    - FGFR fusion
+    - FGFR rearrangement
+    - FGFR amplification
+    zh:
+    - FGFR融合
+    - FGFR重排
+    - FGFR扩增
+    - 成纤维细胞生长因子受体
+    drug_or_class:
+    - FGFR inhibitor
+    - pemigatinib
+    - erdafitinib
+    - futibatinib
+    trial_query_terms:
+    - FGFR
+    - FGFR1/2/3/4
+    - Fibroblast growth factor receptor
+    - FGFR1
+    - FGFR2
+    - FGFR3
+    - FGFR4
+    - FGFR fusion
+    - FGFR rearrangement
+    - FGFR amplification
+    - FGFR inhibitor
+    - pemigatinib
+    - erdafitinib
+    - futibatinib
+    requires_context: false
+- id: shp2
+  name: PTPN11
+  group: A
+  tier: emerging
+  type: gene_protein
+  aliases:
+  - SHP2
+  - PTPN11
+  - SH-PTP2
+  keywords:
+  - PTPN11
+  - SHP2
+  - SH-PTP2
+  - SHP2 inhibitor
+  - TNO155
+  - RMC-4630
+  cn_name: 含SH2结构域蛋白酪氨酸磷酸酶2
+  cn_desc: RAS/MAPK 通路关键调控点，联合 KRAS 抑制剂策略
+  report: true
+  nccn_section: 靶点治疗
+  category: hotspot
+  pdac_id: PTPN11
+  canonical: PTPN11
+  alterations:
+  - pathway_dependency
+  pathway:
+  - RAS-MAPK
+  clinical_tags:
+  - SHP2 inhibitor
+  recommended_detection:
+  - DNA NGS as context
+  source_tags:
+  - additional_emerging_search
+  search_terms:
+    exact:
+    - PTPN11
+    - SHP2
+    - SH-PTP2
+    zh:
+    - SHP2抑制剂
+    - SHP2靶点
+    drug_or_class:
+    - SHP2 inhibitor
+    trial_query_terms:
+    - PTPN11
+    - SHP2
+    - SH-PTP2
+    - SHP2 inhibitor
+    - SHP2抑制剂
+    - SHP2靶点
+    requires_context: false
+- id: met
+  name: MET
+  group: A
+  tier: A
+  type: gene_protein
+  aliases:
+  - MET
+  - C-MET
+  - c-Met
+  - c-MET
+  - HGFR
+  keywords:
+  - MET
+  - c-MET
+  - C-MET
+  - c-Met
+  - HGFR
+  - cMet
+  - telisotuzumab
+  cn_name: 间充质上皮转化因子
+  cn_desc: 过表达/扩增，ADC和激酶抑制剂在研
+  report: true
+  nccn_section: 靶点治疗
+  category: hotspot
+  pdac_id: MET
+  canonical: MET
+  alterations:
+  - amplification
+  - overexpression
+  - exon14_skipping
+  - activating mutation
+  pathway: []
+  clinical_tags: []
+  recommended_detection:
+  - IHC
+  - DNA NGS
+  - RNA NGS
+  - FISH/ISH
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - MET
+    - c-MET
+    - HGFR
+    - cMet
+    - hepatocyte growth factor receptor
+    zh:
+    - MET扩增
+    - MET过表达
+    - c-MET阳性
+    - 肝细胞生长因子受体
+    drug_or_class:
+    - MET inhibitor
+    - c-MET inhibitor
+    - MET ADC
+    trial_query_terms:
+    - MET
+    - c-MET
+    - HGFR
+    - cMet
+    - hepatocyte growth factor receptor
+    - MET inhibitor
+    - c-MET inhibitor
+    - MET ADC
+    requires_context: true
+- id: tf
+  name: F3
+  group: A
+  tier: A
+  type: gene_protein
+  aliases:
+  - TF
+  - Tissue Factor
+  - F3
+  - CD142
+  keywords:
+  - F3
+  - TF
+  - Tissue Factor
+  - CD142
+  - tisotumab
+  cn_name: 组织因子
+  cn_desc: ADC靶点，如 Tisotumab vedotin
+  report: true
+  nccn_section: ADC药物靶点
+  category: hotspot
+  pdac_id: F3
+  canonical: F3
+  alterations:
+  - protein_overexpression
+  pathway: []
+  clinical_tags:
+  - Tissue Factor ADC
+  recommended_detection:
+  - IHC
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - F3
+    - TF
+    - Tissue Factor
+    - CD142
+    zh:
+    - 组织因子
+    - 组织因子阳性
+    - TF高表达
+    drug_or_class:
+    - Tissue Factor ADC
+    - TF ADC
+    - tisotumab
+    trial_query_terms:
+    - F3
+    - TF
+    - Tissue Factor
+    - CD142
+    - Tissue Factor ADC
+    - TF ADC
+    - tisotumab
+    requires_context: true
+- id: msln
+  name: MSLN
+  group: B
+  tier: B
+  type: gene_protein
+  aliases:
+  - MSLN
+  - Mesothelin
+  keywords:
+  - MSLN
+  - Mesothelin
+  - anetumab
+  cn_name: 间皮素
+  cn_desc: CAR-T和ADC热门靶点，胰腺癌高表达
+  report: true
+  nccn_section: 免疫治疗靶点
+  category: advanced
+  pdac_id: MSLN
+  canonical: MSLN
+  alterations:
+  - protein_overexpression
+  pathway: []
+  clinical_tags:
+  - ADC
+  - CAR-T
+  - bispecific antibody
+  recommended_detection:
+  - IHC
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - MSLN
+    - Mesothelin
+    zh:
+    - 间皮素
+    - 间皮素阳性
+    - MSLN高表达
+    drug_or_class:
+    - mesothelin ADC
+    - mesothelin CAR-T
+    - mesothelin bispecific
+    - ADC
+    - CAR-T
+    - bispecific antibody
+    trial_query_terms:
+    - MSLN
+    - Mesothelin
+    - mesothelin ADC
+    - mesothelin CAR-T
+    - mesothelin bispecific
+    - ADC
+    - CAR-T
+    - bispecific antibody
+    requires_context: false
+- id: b7h3
+  name: CD276
+  group: B
+  tier: B
+  type: gene_protein
+  aliases:
+  - B7-H3
+  - B7H3
+  - CD276
+  keywords:
+  - CD276
+  - B7-H3
+  - B7H3
+  - B7 H3
+  cn_name: B7同源体3
+  cn_desc: 免疫检查点分子，ADC和CAR-T在研
+  report: true
+  nccn_section: 免疫治疗靶点
+  category: advanced
+  pdac_id: CD276
+  canonical: CD276
+  alterations:
+  - protein_overexpression
+  pathway: []
+  clinical_tags:
+  - ADC
+  - CAR-T
+  - bispecific antibody
+  - radioimmunotherapy
+  recommended_detection:
+  - IHC
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - CD276
+    - B7-H3
+    - B7H3
+    - B7 H3
+    zh:
+    - B7-H3阳性
+    - CD276阳性
+    drug_or_class:
+    - B7-H3 ADC
+    - B7-H3 CAR-T
+    - B7-H3 bispecific
+    - ADC
+    - CAR-T
+    - bispecific antibody
+    - radioimmunotherapy
+    trial_query_terms:
+    - CD276
+    - B7-H3
+    - B7H3
+    - B7 H3
+    - B7-H3 ADC
+    - B7-H3 CAR-T
+    - B7-H3 bispecific
+    - ADC
+    - CAR-T
+    - bispecific antibody
+    - radioimmunotherapy
+    requires_context: false
+- id: nectin4
+  name: NECTIN4
+  group: B
+  tier: B
+  type: gene_protein
+  aliases:
+  - Nectin-4
+  - NECTIN4
+  - PVRL4
+  keywords:
+  - NECTIN4
+  - Nectin-4
+  - PVRL4
+  - enfortumab
+  cn_name: 连接蛋白4
+  cn_desc: ADC靶点，如 Enfortumab vedotin
+  report: true
+  nccn_section: ADC药物靶点
+  category: advanced
+  pdac_id: NECTIN4
+  canonical: NECTIN4
+  alterations:
+  - protein_overexpression
+  pathway: []
+  clinical_tags:
+  - ADC
+  recommended_detection:
+  - IHC
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - NECTIN4
+    - Nectin-4
+    - PVRL4
+    zh:
+    - 连接蛋白4
+    - Nectin-4阳性
+    drug_or_class:
+    - Nectin-4 ADC
+    - enfortumab vedotin
+    - ADC
+    trial_query_terms:
+    - NECTIN4
+    - Nectin-4
+    - PVRL4
+    - Nectin-4 ADC
+    - enfortumab vedotin
+    - ADC
+    requires_context: false
+- id: pan_trk
+  name: NTRK1/2/3
+  group: B
+  tier: core
+  type: gene_family
+  aliases:
+  - pan-TRK
+  - TRK
+  - NTRK
+  - TRKA
+  - TRKB
+  - TRKC
+  keywords:
+  - NTRK1/2/3
+  - NTRK
+  - pan-TRK
+  - TRKA
+  - TRKB
+  - TRKC
+  - NTRK1
+  - NTRK2
+  - TRK
+  - TRK inhibitor
+  cn_name: 泛TRK
+  cn_desc: 覆盖NTRK1/2/3融合，广谱TRK抑制剂适用
+  report: true
+  nccn_section: 靶点治疗
+  category: advanced
+  pdac_id: NTRK
+  canonical: NTRK1/2/3
+  alterations:
+  - fusion
+  - rearrangement
+  pathway: []
+  clinical_tags:
+  - TRK inhibitor
+  recommended_detection:
+  - RNA NGS preferred
+  - DNA NGS
+  - pan-TRK IHC as screening
+  - FISH
+  - RT-PCR
+  source_tags:
+  - user_original
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - NTRK
+    - NTRK1/2/3
+    - pan-TRK
+    - TRKA
+    - TRKB
+    - TRKC
+    - NTRK1
+    - NTRK2
+    - NTRK3
+    - pan TRK
+    - NTRK fusion
+    - NTRK rearrangement
+    zh:
+    - NTRK融合
+    - NTRK重排
+    - 泛TRK
+    drug_or_class:
+    - TRK inhibitor
+    - larotrectinib
+    - entrectinib
+    - repotrectinib
+    - selitrectinib
+    trial_query_terms:
+    - NTRK
+    - NTRK1/2/3
+    - pan-TRK
+    - TRKA
+    - TRKB
+    - TRKC
+    - NTRK1
+    - NTRK2
+    - NTRK3
+    - pan TRK
+    - NTRK fusion
+    - NTRK rearrangement
+    - TRK inhibitor
+    - larotrectinib
+    - entrectinib
+    - repotrectinib
+    - selitrectinib
+    requires_context: false
+- id: cdh17
+  name: CDH17
+  group: B
+  tier: B
+  type: gene_protein
+  aliases:
+  - CDH17
+  - Cadherin-17
+  - LI-cadherin
+  keywords:
+  - CDH17
+  - Cadherin-17
+  - LI-cadherin
+  - Cadherin 17
+  cn_name: 钙黏蛋白17
+  cn_desc: 胃肠道肿瘤标志物，ADC在研
+  report: true
+  nccn_section: 靶点治疗
+  category: advanced
+  pdac_id: CDH17
+  canonical: CDH17
+  alterations:
+  - protein_overexpression
+  pathway: []
+  clinical_tags:
+  - ADC
+  - CAR-T
+  - bispecific antibody
+  recommended_detection:
+  - IHC
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - CDH17
+    - Cadherin-17
+    - LI-cadherin
+    - Cadherin 17
+    zh:
+    - 钙黏蛋白17
+    - CDH17阳性
+    drug_or_class:
+    - CDH17 ADC
+    - CDH17 CAR-T
+    - CDH17 bispecific
+    - ADC
+    - CAR-T
+    - bispecific antibody
+    trial_query_terms:
+    - CDH17
+    - Cadherin-17
+    - LI-cadherin
+    - Cadherin 17
+    - CDH17 ADC
+    - CDH17 CAR-T
+    - CDH17 bispecific
+    - ADC
+    - CAR-T
+    - bispecific antibody
+    requires_context: false
+- id: ceacam5
+  name: CEACAM5
+  group: B
+  tier: B
+  type: gene_protein
+  aliases:
+  - CEACAM5
+  - CEA
+  - CD66e
+  keywords:
+  - CEACAM5
+  - CEA
+  - CD66e
+  - carcinoembryonic antigen
+  - tusamitamab
+  cn_name: 癌胚抗原相关细胞黏附分子5
+  cn_desc: ADC靶点，如 Tusamitamab ravtansine
+  report: true
+  nccn_section: ADC药物靶点
+  category: advanced
+  pdac_id: CEACAM5
+  canonical: CEACAM5
+  alterations:
+  - protein_overexpression
+  pathway: []
+  clinical_tags:
+  - ADC
+  - bispecific antibody
+  - CAR-T
+  recommended_detection:
+  - IHC
+  - serum CEA as non-equivalent supportive marker
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - CEACAM5
+    - CEA
+    - CD66e
+    - carcinoembryonic antigen
+    zh:
+    - 癌胚抗原
+    - CEA阳性
+    - CEACAM5阳性
+    drug_or_class:
+    - CEA CAR-T
+    - CEACAM5 ADC
+    - CEA bispecific
+    - ADC
+    - bispecific antibody
+    - CAR-T
+    trial_query_terms:
+    - CEACAM5
+    - CEA
+    - CD66e
+    - carcinoembryonic antigen
+    - CEA CAR-T
+    - CEACAM5 ADC
+    - CEA bispecific
+    - ADC
+    - bispecific antibody
+    - CAR-T
+    requires_context: true
+- id: mtap
+  name: MTAP
+  group: B
+  tier: B
+  type: gene_protein
+  aliases:
+  - MTAP
+  - MTAP loss
+  - MTAP deletion
+  - Methylthioadenosine phosphorylase
+  keywords:
+  - MTAP
+  - Methylthioadenosine phosphorylase
+  - MTAP deletion
+  - MTAP loss
+  - MTAP deleted
+  - MTAP-null
+  - MTAP deficient
+  - MTAP deficiency
+  cn_name: 甲硫腺苷磷酸化酶（缺失）
+  cn_desc: 缺失提示对 MAT2A/PRMT5 抑制剂敏感
+  report: true
+  nccn_section: 表观遗传靶点
+  category: advanced
+  pdac_id: MTAP
+  canonical: MTAP
+  alterations:
+  - deletion
+  - loss_of_function
+  - protein_loss
+  pathway: []
+  clinical_tags:
+  - PRMT5 inhibitor
+  - MAT2A inhibitor
+  recommended_detection:
+  - DNA NGS/CNV
+  - IHC
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - MTAP
+    - Methylthioadenosine phosphorylase
+    - MTAP deletion
+    - MTAP loss
+    - MTAP deleted
+    - MTAP-null
+    - MTAP deficient
+    zh:
+    - MTAP缺失
+    - MTAP删除
+    - MTAP蛋白缺失
+    drug_or_class:
+    - MTA-cooperative PRMT5 inhibitor
+    - PRMT5 inhibitor
+    - MAT2A inhibitor
+    - AMG 193
+    - MRTX1719
+    - TNG908
+    - TNG462
+    - IDE397
+    trial_query_terms:
+    - MTAP
+    - Methylthioadenosine phosphorylase
+    - MTAP deletion
+    - MTAP loss
+    - MTAP deleted
+    - MTAP-null
+    - MTAP deficient
+    - MTA-cooperative PRMT5 inhibitor
+    - PRMT5 inhibitor
+    - MAT2A inhibitor
+    - AMG 193
+    - MRTX1719
+    - TNG908
+    - TNG462
+    - IDE397
+    requires_context: false
+- id: muc1
+  name: MUC1
+  group: C
+  tier: C
+  type: gene_protein
+  aliases:
+  - MUC1
+  - Mucin 1
+  - CA15-3-associated antigen
+  keywords:
+  - MUC1
+  - Mucin 1
+  - CA15-3-associated antigen
+  - Mucin-1
+  - tMUC1
+  cn_name: 黏蛋白1
+  cn_desc: 过表达糖蛋白，CAR-T和疫苗在研
+  report: true
+  nccn_section: 免疫治疗靶点
+  category: supplementary
+  pdac_id: MUC1
+  canonical: MUC1
+  alterations:
+  - protein_overexpression
+  - aberrant_glycosylation
+  pathway: []
+  clinical_tags:
+  - ADC
+  - CAR-T
+  - vaccine
+  recommended_detection:
+  - IHC
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - MUC1
+    - Mucin 1
+    - CA15-3-associated antigen
+    - Mucin-1
+    - tMUC1
+    zh:
+    - 黏蛋白1
+    - MUC1阳性
+    drug_or_class:
+    - MUC1 ADC
+    - MUC1 CAR-T
+    - MUC1 vaccine
+    - ADC
+    - CAR-T
+    - vaccine
+    trial_query_terms:
+    - MUC1
+    - Mucin 1
+    - CA15-3-associated antigen
+    - Mucin-1
+    - tMUC1
+    - MUC1 ADC
+    - MUC1 CAR-T
+    - MUC1 vaccine
+    - ADC
+    - CAR-T
+    - vaccine
+    requires_context: false
+- id: folr1
+  name: FOLR1
+  group: C
+  tier: C
+  type: gene_protein
+  aliases:
+  - FOLR1
+  - Folate receptor alpha
+  - FRα
+  - Folate receptor
+  keywords:
+  - FOLR1
+  - Folate receptor alpha
+  - FRα
+  - Folate receptor
+  - FRalpha
+  cn_name: 叶酸受体α
+  cn_desc: ADC靶点，如 Mirvetuximab soravtansine
+  report: true
+  nccn_section: ADC药物靶点
+  category: supplementary
+  pdac_id: FOLR1
+  canonical: FOLR1
+  alterations:
+  - protein_overexpression
+  pathway: []
+  clinical_tags:
+  - ADC
+  recommended_detection:
+  - IHC
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - FOLR1
+    - Folate receptor alpha
+    - FRα
+    - Folate receptor
+    - FRalpha
+    zh:
+    - 叶酸受体
+    - 叶酸受体α
+    - FOLR1阳性
+    drug_or_class:
+    - FOLR1 ADC
+    - FRalpha ADC
+    - ADC
+    trial_query_terms:
+    - FOLR1
+    - Folate receptor alpha
+    - FRα
+    - Folate receptor
+    - FRalpha
+    - FOLR1 ADC
+    - FRalpha ADC
+    - ADC
+    requires_context: true
+- id: dll3
+  name: DLL3
+  group: C
+  tier: C
+  type: gene_protein
+  aliases:
+  - DLL3
+  - Delta-like ligand 3
+  keywords:
+  - DLL3
+  - Delta-like ligand 3
+  - Delta like ligand 3
+  cn_name: Delta样配体3
+  cn_desc: 神经内分泌肿瘤标志，ADC和CAR-T在研
+  report: true
+  nccn_section: 免疫治疗靶点
+  category: supplementary
+  pdac_id: DLL3
+  canonical: DLL3
+  alterations:
+  - protein_overexpression
+  pathway: []
+  clinical_tags:
+  - ADC
+  - bispecific T-cell engager
+  - CAR-T
+  recommended_detection:
+  - IHC
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - DLL3
+    - Delta-like ligand 3
+    - Delta like ligand 3
+    zh:
+    - DLL3阳性
+    - Delta样配体3
+    drug_or_class:
+    - DLL3 ADC
+    - DLL3 bispecific
+    - DLL3 CAR-T
+    - ADC
+    - bispecific T-cell engager
+    - CAR-T
+    trial_query_terms:
+    - DLL3
+    - Delta-like ligand 3
+    - Delta like ligand 3
+    - DLL3 ADC
+    - DLL3 bispecific
+    - DLL3 CAR-T
+    - ADC
+    - bispecific T-cell engager
+    - CAR-T
+    requires_context: false
+- id: ca125
+  name: MUC16
+  group: C
+  tier: C
+  type: gene_protein
+  aliases:
+  - CA125
+  - MUC16
+  - Mucin 16
+  keywords:
+  - MUC16
+  - CA125
+  - Mucin 16
+  - CA-125
+  cn_name: 糖类抗原125
+  cn_desc: 血清标志物，监测治疗反应
+  report: true
+  nccn_section: 肿瘤标志物
+  category: supplementary
+  pdac_id: MUC16
+  canonical: MUC16
+  alterations:
+  - protein_overexpression
+  pathway: []
+  clinical_tags:
+  - ADC
+  - CAR-T
+  - bispecific antibody
+  recommended_detection:
+  - IHC
+  - serum CA125 as non-equivalent supportive marker
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - MUC16
+    - CA125
+    - Mucin 16
+    - CA-125
+    zh:
+    - 糖类抗原125
+    - CA125升高
+    - MUC16阳性
+    drug_or_class:
+    - MUC16 ADC
+    - MUC16 CAR-T
+    - MUC16 bispecific
+    - ADC
+    - CAR-T
+    - bispecific antibody
+    trial_query_terms:
+    - MUC16
+    - CA125
+    - Mucin 16
+    - CA-125
+    - MUC16 ADC
+    - MUC16 CAR-T
+    - MUC16 bispecific
+    - ADC
+    - CAR-T
+    - bispecific antibody
+    requires_context: false
+- id: immune
+  name: Immunotherapy
+  group: core
+  tier: context
+  type: topic_tag
+  aliases:
+  - Immune
+  - Immunotherapy
+  - 免疫
+  - 免疫治疗
+  - PD-1
+  - PD-L1
+  keywords:
+  - Immunotherapy
+  - Immune
+  - 免疫
+  - 免疫治疗
+  - IMMUNOTHERAPY
+  - immune therapy
+  - immuno-oncology
+  - IO
+  - PD-1
+  - PD-L1
+  cn_name: 免疫治疗
+  cn_desc: 免疫治疗宽召回标签
+  report: false
+  nccn_section: ''
+  category: context
+  pdac_id: IMMUNOTHERAPY
+  canonical: Immunotherapy
+  alterations: []
+  pathway: []
+  clinical_tags: []
+  recommended_detection: []
+  source_tags:
+  - user_original
+  search_terms:
+    exact:
+    - IMMUNOTHERAPY
+    - Immune
+    - 免疫
+    - 免疫治疗
+    - immune therapy
+    - immuno-oncology
+    - IO
+    zh:
+    - 免疫
+    - 免疫治疗
+    - 肿瘤免疫
+    - 免疫检查点
+    - 免疫联合治疗
+    drug_or_class:
+    - PD-1 inhibitor
+    - PD-L1 inhibitor
+    - CTLA-4 inhibitor
+    - immune checkpoint inhibitor
+    - ICI
+    trial_query_terms:
+    - IMMUNOTHERAPY
+    - Immune
+    - 免疫
+    - 免疫治疗
+    - immune therapy
+    - immuno-oncology
+    - IO
+    - PD-1 inhibitor
+    - PD-L1 inhibitor
+    - CTLA-4 inhibitor
+    - immune checkpoint inhibitor
+    - ICI
+    requires_context: true
+- id: palb2
+  name: PALB2
+  group: core
+  tier: core
+  type: gene
+  aliases:
+  - PALB2
+  - Partner and localizer of BRCA2
+  keywords:
+  - PALB2
+  - Partner and localizer of BRCA2
+  cn_name: PALB2
+  cn_desc: HRR/DDR 相关，PARP/铂类敏感线索
+  report: true
+  nccn_section: DNA损伤修复
+  category: guideline
+  pdac_id: PALB2
+  canonical: PALB2
+  alterations:
+  - germline_pathogenic_variant
+  - somatic_pathogenic_variant
+  - biallelic_loss
+  pathway:
+  - DDR
+  - HRR
+  clinical_tags: []
+  recommended_detection:
+  - germline NGS
+  - tumor DNA NGS
+  source_tags:
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - PALB2
+    - Partner and localizer of BRCA2
+    zh:
+    - PALB2胚系突变
+    - PALB2体细胞突变
+    - PALB2致病突变
+    drug_or_class:
+    - PARP inhibitor
+    - platinum sensitivity
+    trial_query_terms:
+    - PALB2
+    - Partner and localizer of BRCA2
+    - PARP inhibitor
+    - platinum sensitivity
+    requires_context: false
+- id: msi_mmr
+  name: MSI-H/dMMR
+  group: core
+  tier: core
+  type: composite_biomarker
+  aliases:
+  - MSI-H
+  - dMMR
+  - MSI
+  - MMR
+  - microsatellite instability
+  - MSI high
+  - Mismatch repair deficiency
+  - Microsatellite instability-high
+  keywords:
+  - MSI-H/dMMR
+  - MSI-H
+  - MSI high
+  - dMMR
+  - Mismatch repair deficiency
+  - Microsatellite instability-high
+  - MSI_MMR
+  - MLH1
+  - MSI
+  - MMR
+  - microsatellite instability
+  cn_name: 微卫星高度不稳定/错配修复缺陷
+  cn_desc: 免疫治疗优势人群标志
+  report: true
+  nccn_section: 免疫治疗
+  category: guideline
+  pdac_id: MSI_MMR
+  canonical: MSI-H/dMMR
+  alterations:
+  - protein_loss
+  - pathogenic_variant
+  - microsatellite_instability
+  pathway: []
+  clinical_tags:
+  - immune checkpoint inhibitor
+  recommended_detection:
+  - MMR IHC
+  - PCR MSI
+  - validated NGS MSI
+  source_tags:
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - MSI_MMR
+    - MSI-H/dMMR
+    - MSI-H
+    - MSI high
+    - dMMR
+    - Mismatch repair deficiency
+    - Microsatellite instability-high
+    - MLH1
+    - MSH2
+    - MSH6
+    - PMS2
+    - MSI-high
+    - MMR deficient
+    zh:
+    - 微卫星高度不稳定
+    - 错配修复缺陷
+    - MMR蛋白缺失
+    drug_or_class:
+    - immune checkpoint inhibitor
+    - PD-1 inhibitor
+    - pembrolizumab
+    trial_query_terms:
+    - MSI_MMR
+    - MSI-H/dMMR
+    - MSI-H
+    - MSI high
+    - dMMR
+    - Mismatch repair deficiency
+    - Microsatellite instability-high
+    - MLH1
+    - MSH2
+    - MSH6
+    - PMS2
+    - MSI-high
+    - MMR deficient
+    - immune checkpoint inhibitor
+    - PD-1 inhibitor
+    - pembrolizumab
+    requires_context: false
+- id: brca
+  name: BRCA1/2
+  group: core
+  tier: core
+  type: gene_family
+  aliases:
+  - BRCA
+  - BRCA1/2
+  - BRCA1
+  - BRCA2
+  - BRCA 1/2
+  keywords:
+  - BRCA1/2
+  - BRCA
+  - BRCA1
+  - BRCA2
+  - BRCA 1/2
+  cn_name: BRCA1/2
+  cn_desc: 家族性/胚系突变宽召回（兼容旧 KEYWORDS）
+  report: false
+  nccn_section: ''
+  category: guideline
+  pdac_id: BRCA
+  canonical: BRCA1/2
+  alterations:
+  - germline_pathogenic_variant
+  - somatic_pathogenic_variant
+  - biallelic_loss
+  pathway:
+  - DDR
+  - HRR
+  clinical_tags:
+  - platinum sensitivity
+  - PARP inhibitor
+  recommended_detection:
+  - germline NGS
+  - tumor DNA NGS
+  source_tags:
+  - user_original
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - BRCA
+    - BRCA1/2
+    - BRCA1
+    - BRCA2
+    - BRCA 1/2
+    zh: []
+    drug_or_class:
+    - platinum sensitivity
+    - PARP inhibitor
+    trial_query_terms:
+    - BRCA
+    - BRCA1/2
+    - BRCA1
+    - BRCA2
+    - BRCA 1/2
+    - platinum sensitivity
+    - PARP inhibitor
+    requires_context: false
+- id: alk
+  name: ALK
+  group: B
+  tier: B
+  type: gene
+  aliases:
+  - ALK
+  - Anaplastic lymphoma kinase
+  keywords:
+  - ALK
+  - Anaplastic lymphoma kinase
+  - ALK fusion
+  - ALK rearrangement
+  cn_name: ALK
+  cn_desc: 融合驱动，篮子试验相关
+  report: false
+  nccn_section: ''
+  category: advanced
+  pdac_id: ALK
+  canonical: ALK
+  alterations:
+  - fusion
+  - rearrangement
+  pathway: []
+  clinical_tags:
+  - ALK inhibitor
+  recommended_detection:
+  - RNA NGS preferred
+  - DNA NGS
+  - IHC
+  - FISH
+  source_tags:
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - ALK
+    - Anaplastic lymphoma kinase
+    - ALK fusion
+    - ALK rearrangement
+    zh:
+    - ALK融合
+    - ALK重排
+    drug_or_class:
+    - ALK inhibitor
+    - entrectinib
+    trial_query_terms:
+    - ALK
+    - Anaplastic lymphoma kinase
+    - ALK fusion
+    - ALK rearrangement
+    - ALK inhibitor
+    - entrectinib
+    requires_context: true
+- id: ros1
+  name: ROS1
+  group: B
+  tier: B
+  type: gene
+  aliases:
+  - ROS1
+  - ROS proto-oncogene 1
+  keywords:
+  - ROS1
+  - ROS proto-oncogene 1
+  - ROS1 fusion
+  - ROS1 rearrangement
+  cn_name: ROS1
+  cn_desc: 融合驱动，篮子试验相关
+  report: false
+  nccn_section: ''
+  category: advanced
+  pdac_id: ROS1
+  canonical: ROS1
+  alterations:
+  - fusion
+  - rearrangement
+  pathway: []
+  clinical_tags:
+  - ROS1 inhibitor
+  recommended_detection:
+  - RNA NGS preferred
+  - DNA NGS
+  - FISH
+  - RT-PCR
+  source_tags:
+  - uploaded_consensus_extract
+  search_terms:
+    exact:
+    - ROS1
+    - ROS proto-oncogene 1
+    - ROS1 fusion
+    - ROS1 rearrangement
+    zh:
+    - ROS1融合
+    - ROS1重排
+    drug_or_class:
+    - ROS1 inhibitor
+    - entrectinib
+    trial_query_terms:
+    - ROS1
+    - ROS proto-oncogene 1
+    - ROS1 fusion
+    - ROS1 rearrangement
+    - ROS1 inhibitor
+    - entrectinib
+    requires_context: false
+- id: arid1a
+  name: ARID1A
+  group: B
+  tier: B
+  type: gene
+  aliases:
+  - ARID1A
+  - BAF250A
+  keywords:
+  - ARID1A
+  - BAF250A
+  cn_name: ARID1A
+  cn_desc: SWI/SNF / DDR 相关探索靶点
+  report: false
+  nccn_section: ''
+  category: advanced
+  pdac_id: ARID1A
+  canonical: ARID1A
+  alterations:
+  - loss_of_function
+  pathway:
+  - chromatin remodeling
+  - DDR-related
+  clinical_tags: []
+  recommended_detection:
+  - DNA NGS
+  - IHC as supportive evidence
+  source_tags: []
+  search_terms:
+    exact:
+    - ARID1A
+    - BAF250A
+    zh: []
+    drug_or_class: []
+    trial_query_terms:
+    - ARID1A
+    - BAF250A
+    requires_context: false
+knowledge_targets:
+- id: rad51
+  pdac_id: RAD51
+  name: RAD51
+  tier: A
+  type: gene_family
+  aliases:
+  - RAD51 family
+  - RAD51 paralogs
+  keywords:
+  - RAD51
+  - RAD51 family
+  - RAD51 paralogs
+  pathway:
+  - DDR
+  - HRR
+  clinical_tags: []
+- id: chek2
+  pdac_id: CHEK2
+  name: CHEK2
+  tier: A
+  type: gene
+  aliases:
+  - CHK2
+  keywords:
+  - CHEK2
+  - CHK2
+  pathway:
+  - DDR
+  - HRR
+  clinical_tags: []
+- id: fanca
+  pdac_id: FANCA
+  name: FANCA
+  tier: A
+  type: gene
+  aliases:
+  - Fanconi anemia complementation group A
+  keywords:
+  - FANCA
+  - Fanconi anemia complementation group A
+  pathway:
+  - DDR
+  - Fanconi anemia
+  - HRR-related
+  clinical_tags: []
+- id: pten
+  pdac_id: PTEN
+  name: PTEN
+  tier: B
+  type: gene
+  aliases:
+  - MMAC1
+  keywords:
+  - PTEN
+  - MMAC1
+  pathway:
+  - PI3K-AKT
+  - DDR-related
+  clinical_tags: []
+- id: ccne1
+  pdac_id: CCNE1
+  name: CCNE1
+  tier: C
+  type: gene
+  aliases:
+  - CCNE
+  - Cyclin E1
+  keywords:
+  - CCNE1
+  - CCNE
+  - Cyclin E1
+  pathway:
+  - cell cycle
+  - DDR-related
+  clinical_tags: []
+- id: fancb
+  pdac_id: FANCB
+  name: FANCB
+  tier: B
+  type: gene
+  aliases:
+  - Fanconi anemia complementation group B
+  keywords:
+  - FANCB
+  - Fanconi anemia complementation group B
+  pathway:
+  - DDR
+  - Fanconi anemia
+  clinical_tags: []
+- id: tp53
+  pdac_id: TP53
+  name: TP53
+  tier: context
+  type: gene
+  aliases:
+  - p53
+  - Tumor protein p53
+  keywords:
+  - TP53
+  - p53
+  - Tumor protein p53
+  pathway:
+  - tumor suppressor
+  - cell cycle
+  - DDR
+  clinical_tags: []
+- id: tmb
+  pdac_id: TMB
+  name: TMB
+  tier: context
+  type: composite_biomarker
+  aliases:
+  - Tumor mutational burden
+  - TMB-H
+  - High tumor mutational burden
+  keywords:
+  - TMB
+  - Tumor mutational burden
+  - TMB-H
+  - High tumor mutational burden
+  - TMB high
+  - tumour mutational burden
+  pathway: []
+  clinical_tags:
+  - immune checkpoint inhibitor
+- id: hrr
+  pdac_id: HRR
+  name: HRR
+  tier: core
+  type: pathway_biomarker
+  aliases:
+  - Homologous recombination repair
+  - HRD
+  - 同源重组修复
+  - 同源重组缺陷
+  keywords:
+  - HRR
+  - Homologous recombination repair
+  - HRD
+  - 同源重组修复
+  - 同源重组缺陷
+  - BRCA1
+  - BRCA2
+  - PALB2
+  - RAD51
+  - ATM
+  - CHEK2
+  - FANCA
+  pathway: []
+  clinical_tags:
+  - platinum sensitivity
+  - PARP inhibitor
+  - ATR inhibitor trials
+- id: ddr
+  pdac_id: DDR
+  name: DDR
+  tier: context
+  type: pathway_biomarker
+  aliases:
+  - DNA damage repair
+  - DNA损伤修复
+  keywords:
+  - DDR
+  - DNA damage repair
+  - DNA损伤修复
+  - BRCA1
+  - BRCA2
+  - PALB2
+  - RAD51
+  - ATM
+  - CHEK2
+  - FANCA
+  - FANCB
+  - ARID1A
+  pathway: []
+  clinical_tags: []
+- id: sos1
+  pdac_id: SOS1
+  name: SOS1
+  tier: emerging
+  type: gene_protein
+  aliases:
+  - Son of sevenless homolog 1
+  keywords:
+  - SOS1
+  - Son of sevenless homolog 1
+  pathway:
+  - RAS-MAPK
+  clinical_tags:
+  - SOS1 inhibitor
+- id: map2k1_map2k2
+  pdac_id: MAP2K1_MAP2K2
+  name: MEK1/2
+  tier: emerging
+  type: pathway_target
+  aliases:
+  - MEK
+  - MEK1
+  - MEK2
+  - MAP2K1
+  - MAP2K2
+  keywords:
+  - MAP2K1_MAP2K2
+  - MEK1/2
+  - MEK
+  - MEK1
+  - MEK2
+  - MAP2K1
+  - MAP2K2
+  pathway:
+  - RAS-MAPK
+  clinical_tags:
+  - MEK inhibitor
+- id: mapk1_mapk3
+  pdac_id: MAPK1_MAPK3
+  name: ERK1/2
+  tier: emerging
+  type: pathway_target
+  aliases:
+  - ERK
+  - ERK1
+  - ERK2
+  - MAPK3
+  - MAPK1
+  keywords:
+  - MAPK1_MAPK3
+  - ERK1/2
+  - ERK
+  - ERK1
+  - ERK2
+  - MAPK3
+  - MAPK1
+  pathway:
+  - RAS-MAPK
+  clinical_tags:
+  - ERK inhibitor
+- id: raf1
+  pdac_id: RAF1
+  name: RAF1
+  tier: exploratory
+  type: gene_protein
+  aliases:
+  - CRAF
+  - C-RAF
+  keywords:
+  - RAF1
+  - CRAF
+  - C-RAF
+  pathway:
+  - RAS-MAPK
+  clinical_tags:
+  - RAF dimer inhibitor
+  - pan-RAF inhibitor
+- id: atr
+  pdac_id: ATR
+  name: ATR
+  tier: emerging
+  type: gene_protein
+  aliases:
+  - ATR kinase
+  - Ataxia telangiectasia and Rad3 related
+  keywords:
+  - ATR
+  - ATR kinase
+  - Ataxia telangiectasia and Rad3 related
+  pathway:
+  - DDR
+  - replication stress
+  clinical_tags:
+  - ATR inhibitor
+- id: chek1
+  pdac_id: CHEK1
+  name: CHEK1
+  tier: exploratory
+  type: gene_protein
+  aliases:
+  - CHK1
+  keywords:
+  - CHEK1
+  - CHK1
+  pathway:
+  - DDR
+  - replication stress
+  clinical_tags:
+  - CHK1 inhibitor
+- id: wee1
+  pdac_id: WEE1
+  name: WEE1
+  tier: emerging
+  type: gene_protein
+  aliases:
+  - WEE1 kinase
+  keywords:
+  - WEE1
+  - WEE1 kinase
+  pathway:
+  - cell cycle
+  - replication stress
+  clinical_tags:
+  - WEE1 inhibitor
+- id: parp1_parp2
+  pdac_id: PARP1_PARP2
+  name: PARP1/2
+  tier: core
+  type: pathway_target
+  aliases:
+  - PARP
+  - PARP1
+  - PARP2
+  - poly ADP-ribose polymerase
+  keywords:
+  - PARP1_PARP2
+  - PARP1/2
+  - PARP
+  - PARP1
+  - PARP2
+  - poly ADP-ribose polymerase
+  pathway:
+  - DDR
+  - single-strand break repair
+  clinical_tags:
+  - PARP inhibitor
+- id: polq
+  pdac_id: POLQ
+  name: POLQ
+  tier: exploratory
+  type: gene_protein
+  aliases:
+  - POLθ
+  - POL theta
+  - DNA polymerase theta
+  keywords:
+  - POLQ
+  - POLθ
+  - POL theta
+  - DNA polymerase theta
+  pathway:
+  - DDR
+  - microhomology-mediated end joining
+  clinical_tags:
+  - POLQ inhibitor
+- id: prmt5
+  pdac_id: PRMT5
+  name: PRMT5
+  tier: emerging
+  type: gene_protein
+  aliases:
+  - Protein arginine methyltransferase 5
+  keywords:
+  - PRMT5
+  - Protein arginine methyltransferase 5
+  pathway:
+  - MTAP synthetic lethality
+  - methylation
+  clinical_tags:
+  - MTA-cooperative PRMT5 inhibitor
+  - PRMT5 inhibitor
+- id: mat2a
+  pdac_id: MAT2A
+  name: MAT2A
+  tier: emerging
+  type: gene_protein
+  aliases:
+  - Methionine adenosyltransferase 2A
+  keywords:
+  - MAT2A
+  - Methionine adenosyltransferase 2A
+  pathway:
+  - MTAP synthetic lethality
+  - methionine metabolism
+  clinical_tags:
+  - MAT2A inhibitor
+- id: cdkn2a
+  pdac_id: CDKN2A
+  name: CDKN2A
+  tier: context
+  type: gene
+  aliases:
+  - p16
+  - INK4A
+  - p14ARF
+  - CDKN2A loss
+  keywords:
+  - CDKN2A
+  - p16
+  - INK4A
+  - p14ARF
+  - CDKN2A loss
+  pathway:
+  - cell cycle
+  clinical_tags:
+  - CDK4/6 inhibitor context
+- id: cdk4_cdk6
+  pdac_id: CDK4_CDK6
+  name: CDK4/6
+  tier: exploratory
+  type: pathway_target
+  aliases:
+  - CDK4
+  - CDK6
+  - cyclin-dependent kinase 4/6
+  keywords:
+  - CDK4_CDK6
+  - CDK4/6
+  - CDK4
+  - CDK6
+  - cyclin-dependent kinase 4/6
+  pathway:
+  - cell cycle
+  clinical_tags:
+  - CDK4/6 inhibitor
+- id: smad4
+  pdac_id: SMAD4
+  name: SMAD4
+  tier: context
+  type: gene
+  aliases:
+  - DPC4
+  keywords:
+  - SMAD4
+  - DPC4
+  pathway:
+  - TGF-beta
+  - tumor suppressor
+  clinical_tags: []
+- id: gnas
+  pdac_id: GNAS
+  name: GNAS
+  tier: context
+  type: gene
+  aliases:
+  - GNAS R201C
+  - GNAS R201H
+  - Gs alpha
+  keywords:
+  - GNAS
+  - GNAS R201C
+  - GNAS R201H
+  - Gs alpha
+  pathway:
+  - cAMP-PKA
+  - IPMN-related
+  clinical_tags: []
+- id: rnf43
+  pdac_id: RNF43
+  name: RNF43
+  tier: exploratory
+  type: gene
+  aliases:
+  - Ring finger protein 43
+  keywords:
+  - RNF43
+  - Ring finger protein 43
+  pathway:
+  - WNT
+  clinical_tags:
+  - WNT inhibitor
+  - PORCN inhibitor context
+- id: tnfrsf5
+  pdac_id: TNFRSF5
+  name: CD40
+  tier: emerging
+  type: immune_target
+  aliases:
+  - CD40
+  - TNFRSF5
+  keywords:
+  - TNFRSF5
+  - CD40
+  pathway:
+  - immune activation
+  - antigen presentation
+  clinical_tags:
+  - CD40 agonist
+- id: cd47_sirpa
+  pdac_id: CD47_SIRPA
+  name: CD47/SIRPα
+  tier: exploratory
+  type: immune_axis
+  aliases:
+  - CD47
+  - SIRPA
+  - SIRPα
+  - SIRP alpha
+  - do not eat me signal
+  keywords:
+  - CD47_SIRPA
+  - CD47/SIRPα
+  - CD47
+  - SIRPA
+  - SIRPα
+  - SIRP alpha
+  - do not eat me signal
+  pathway:
+  - innate immune checkpoint
+  - macrophage
+  clinical_tags:
+  - CD47 inhibitor
+  - SIRPα inhibitor
+- id: nt5e
+  pdac_id: NT5E
+  name: CD73
+  tier: emerging
+  type: immune_target
+  aliases:
+  - CD73
+  - NT5E
+  - ecto-5-prime-nucleotidase
+  keywords:
+  - NT5E
+  - CD73
+  - ecto-5-prime-nucleotidase
+  pathway:
+  - adenosine pathway
+  - immune suppression
+  clinical_tags:
+  - CD73 inhibitor
+  - adenosine pathway inhibitor
+- id: cxcr4
+  pdac_id: CXCR4
+  name: CXCR4
+  tier: emerging
+  type: gene_protein
+  aliases:
+  - C-X-C chemokine receptor type 4
+  - CD184
+  keywords:
+  - CXCR4
+  - C-X-C chemokine receptor type 4
+  - CD184
+  pathway:
+  - CXCL12-CXCR4
+  - tumor microenvironment
+  clinical_tags:
+  - CXCR4 antagonist
+- id: ccr2
+  pdac_id: CCR2
+  name: CCR2
+  tier: emerging
+  type: gene_protein
+  aliases:
+  - C-C chemokine receptor type 2
+  - CD192
+  keywords:
+  - CCR2
+  - C-C chemokine receptor type 2
+  - CD192
+  pathway:
+  - CCL2-CCR2
+  - myeloid suppression
+  clinical_tags:
+  - CCR2 inhibitor
+- id: csf1r
+  pdac_id: CSF1R
+  name: CSF1R
+  tier: exploratory
+  type: gene_protein
+  aliases:
+  - CD115
+  - M-CSF receptor
+  keywords:
+  - CSF1R
+  - CD115
+  - M-CSF receptor
+  pathway:
+  - macrophage
+  - myeloid suppression
+  clinical_tags:
+  - CSF1R inhibitor
+- id: tigit
+  pdac_id: TIGIT
+  name: TIGIT
+  tier: emerging
+  type: immune_checkpoint
+  aliases:
+  - T cell immunoreceptor with Ig and ITIM domains
+  keywords:
+  - TIGIT
+  - T cell immunoreceptor with Ig and ITIM domains
+  pathway:
+  - adaptive immune checkpoint
+  clinical_tags:
+  - TIGIT inhibitor
+  - PD-1 TIGIT bispecific
+- id: lag3
+  pdac_id: LAG3
+  name: LAG3
+  tier: exploratory
+  type: immune_checkpoint
+  aliases:
+  - LAG-3
+  - CD223
+  keywords:
+  - LAG3
+  - LAG-3
+  - CD223
+  pathway:
+  - adaptive immune checkpoint
+  clinical_tags:
+  - LAG3 inhibitor
+- id: havcr2
+  pdac_id: HAVCR2
+  name: TIM-3
+  tier: exploratory
+  type: immune_checkpoint
+  aliases:
+  - TIM3
+  - TIM-3
+  - HAVCR2
+  keywords:
+  - HAVCR2
+  - TIM-3
+  - TIM3
+  pathway:
+  - adaptive immune checkpoint
+  clinical_tags:
+  - TIM-3 inhibitor
+- id: vsir
+  pdac_id: VSIR
+  name: VISTA
+  tier: exploratory
+  type: immune_checkpoint
+  aliases:
+  - VISTA
+  - VSIR
+  - B7-H5
+  - PD-1H
+  keywords:
+  - VSIR
+  - VISTA
+  - B7-H5
+  - PD-1H
+  pathway:
+  - myeloid immune checkpoint
+  clinical_tags:
+  - VISTA inhibitor
+- id: tgfb_axis
+  pdac_id: TGFB_AXIS
+  name: TGF-β/TGFBR1
+  tier: emerging
+  type: pathway_target
+  aliases:
+  - TGF-beta
+  - TGFβ
+  - TGFB1
+  - TGFBR1
+  - ALK5
+  keywords:
+  - TGFB_AXIS
+  - TGF-β/TGFBR1
+  - TGF-beta
+  - TGFβ
+  - TGFB1
+  - TGFBR1
+  - ALK5
+  pathway:
+  - TGF-beta
+  - stroma
+  - immune suppression
+  clinical_tags:
+  - TGF-beta inhibitor
+  - TGFBR1 inhibitor
+- id: ptk2
+  pdac_id: PTK2
+  name: FAK
+  tier: emerging
+  type: gene_protein
+  aliases:
+  - PTK2
+  - FAK
+  - focal adhesion kinase
+  keywords:
+  - PTK2
+  - FAK
+  - focal adhesion kinase
+  pathway:
+  - focal adhesion
+  - stroma
+  clinical_tags:
+  - FAK inhibitor
+- id: fap
+  pdac_id: FAP
+  name: FAP
+  tier: emerging
+  type: stromal_surface_target
+  aliases:
+  - Fibroblast activation protein
+  - FAP-alpha
+  - FAPα
+  keywords:
+  - FAP
+  - Fibroblast activation protein
+  - FAP-alpha
+  - FAPα
+  pathway:
+  - cancer-associated fibroblast
+  - stroma
+  clinical_tags:
+  - FAP inhibitor
+  - FAP radioligand
+  - FAPI
+  - FAP CAR-T
+- id: itgb6
+  pdac_id: ITGB6
+  name: ITGB6
+  tier: emerging
+  type: surface_target
+  aliases:
+  - integrin beta 6
+  - integrin β6
+  - alpha-v beta-6
+  - αvβ6
+  - integrin alpha v beta 6
+  keywords:
+  - ITGB6
+  - integrin beta 6
+  - integrin β6
+  - alpha-v beta-6
+  - αvβ6
+  - integrin alpha v beta 6
+  pathway:
+  - integrin
+  - TGF-beta activation
+  clinical_tags:
+  - ITGB6 ADC
+  - αvβ6 imaging
+  - αvβ6 radioligand
+- id: gpc1
+  pdac_id: GPC1
+  name: GPC1
+  tier: exploratory
+  type: surface_target
+  aliases:
+  - Glypican-1
+  - Glypican 1
+  keywords:
+  - GPC1
+  - Glypican-1
+  - Glypican 1
+  pathway: []
+  clinical_tags:
+  - GPC1 CAR-T
+  - GPC1 antibody
+  - GPC1 ADC
+- id: psca
+  pdac_id: PSCA
+  name: PSCA
+  tier: exploratory
+  type: surface_target
+  aliases:
+  - Prostate stem cell antigen
+  keywords:
+  - PSCA
+  - Prostate stem cell antigen
+  pathway: []
+  clinical_tags:
+  - PSCA CAR-T
+  - PSCA antibody
+- id: ceacam6
+  pdac_id: CEACAM6
+  name: CEACAM6
+  tier: exploratory
+  type: surface_target
+  aliases:
+  - CD66c
+  - NCA-90
+  keywords:
+  - CEACAM6
+  - CD66c
+  - NCA-90
+  pathway: []
+  clinical_tags:
+  - CEACAM6 antibody
+  - CEACAM6 CAR-T
+  - CEACAM6 ADC
+- id: axl
+  pdac_id: AXL
+  name: AXL
+  tier: exploratory
+  type: receptor_tyrosine_kinase
+  aliases:
+  - UFO receptor
+  - ARK receptor tyrosine kinase
+  keywords:
+  - AXL
+  - UFO receptor
+  - ARK receptor tyrosine kinase
+  pathway:
+  - EMT
+  - drug resistance
+  clinical_tags:
+  - AXL inhibitor
+  - AXL ADC
+- id: erbb3
+  pdac_id: ERBB3
+  name: ERBB3
+  tier: emerging
+  type: gene_protein
+  aliases:
+  - HER3
+  - HER-3
+  keywords:
+  - ERBB3
+  - HER3
+  - HER-3
+  pathway:
+  - HER family
+  - NRG1 signaling
+  clinical_tags:
+  - HER3 antibody
+  - HER3 ADC
+  - HER2 HER3 bispecific
+- id: epha2
+  pdac_id: EPHA2
+  name: EPHA2
+  tier: exploratory
+  type: surface_target
+  aliases:
+  - EphA2
+  - Ephrin type-A receptor 2
+  keywords:
+  - EPHA2
+  - Ephrin type-A receptor 2
+  pathway: []
+  clinical_tags:
+  - EPHA2 CAR-T
+  - EPHA2 antibody
+  - EPHA2 ADC
+- id: muc5ac
+  pdac_id: MUC5AC
+  name: MUC5AC
+  tier: exploratory
+  type: surface_secreted_target
+  aliases:
+  - Mucin 5AC
+  - Mucin-5AC
+  keywords:
+  - MUC5AC
+  - Mucin 5AC
+  - Mucin-5AC
+  pathway: []
+  clinical_tags:
+  - MUC5AC antibody
+  - MUC5AC CAR-T
+- id: ca19_9
+  pdac_id: CA19_9
+  name: CA19-9/Sialyl-Lewis A
+  tier: exploratory
+  type: carbohydrate_antigen
+  aliases:
+  - CA19-9
+  - CA 19-9
+  - CA199
+  - Sialyl-Lewis A
+  - sLea
+  keywords:
+  - CA19_9
+  - CA19-9/Sialyl-Lewis A
+  - CA19-9
+  - CA 19-9
+  - CA199
+  - Sialyl-Lewis A
+  - sLea
+  pathway: []
+  clinical_tags:
+  - CA19-9 antibody
+  - Sialyl-Lewis A CAR-T
+scope_warning: 本文件用于信息检索、实体识别和临床试验候选召回。core/A/B/C/emerging/exploratory仅表示检索与证据优先级，不等于获批适应证、治疗推荐或患者符合入组条件；所有结果需回到原始试验方案和研究中心确认。

@@ -52,10 +52,17 @@ def load_targets_config(path: str | Path | None = None) -> dict[str, Any]:
 def list_targets(
     groups: Iterable[str] | None = None,
     config: dict[str, Any] | None = None,
+    include_knowledge: bool = False,
 ) -> list[dict[str, Any]]:
     """按分组返回靶点列表。groups=None 时用 YAML 的 default_groups。"""
     cfg = config if config is not None else load_targets_config()
-    targets = cfg.get("targets") or []
+    targets = list(cfg.get("targets") or [])
+    if include_knowledge:
+        for kt in cfg.get("knowledge_targets") or []:
+            # 知识层条目没有 group 时标为 knowledge
+            row = dict(kt)
+            row.setdefault("group", "knowledge")
+            targets.append(row)
     if not targets:
         return []
 
@@ -75,6 +82,7 @@ def expand_keywords(
 
     - 默认取每个靶点的 keywords 字段；为空则回退 aliases
     - include_aliases=True 时额外并入 aliases
+    - 不默认展开 search_terms.trial_query_terms（避免 OR 过长）
     """
     targets = list_targets(groups=groups, config=config)
     if not targets:
@@ -134,9 +142,9 @@ def _norm_key(s: str) -> str:
 
 
 def _target_match_keys(target: dict[str, Any]) -> list[str]:
-    """收集一个靶点可用于匹配的全部键（id/name/aliases/keywords/cn_name）。"""
+    """收集一个靶点可用于匹配的全部键（id/name/aliases/keywords/cn_name/search_terms）。"""
     keys: list[str] = []
-    for field in ("id", "name", "cn_name"):
+    for field in ("id", "name", "cn_name", "canonical", "pdac_id"):
         v = target.get(field)
         if v:
             keys.append(str(v))
@@ -144,11 +152,28 @@ def _target_match_keys(target: dict[str, Any]) -> list[str]:
         for item in target.get(field) or []:
             if item:
                 keys.append(str(item))
+    st = target.get("search_terms") or {}
+    if isinstance(st, dict):
+        for bucket in ("exact", "zh", "drug_or_class"):
+            for item in st.get(bucket) or []:
+                if item:
+                    keys.append(str(item))
     return keys
 
 
-def target_keywords(target: dict[str, Any], include_aliases: bool = True) -> list[str]:
-    """从单个靶点展开检索词（保序去重）。"""
+def target_keywords(
+    target: dict[str, Any],
+    include_aliases: bool = True,
+    rich: bool = True,
+) -> list[str]:
+    """
+    从单个靶点展开检索词（保序去重）。
+
+    rich=True（默认，用于 --target / 菜单单一靶点）:
+      keywords + aliases + search_terms.exact/zh/drug_or_class
+    rich=False:
+      仅 keywords（或 aliases 兜底）
+    """
     seen: set[str] = set()
     out: list[str] = []
     words: list[str] = []
@@ -158,6 +183,11 @@ def target_keywords(target: dict[str, Any], include_aliases: bool = True) -> lis
         words.extend(str(x).strip() for x in kws if str(x).strip())
     if include_aliases or not kws:
         words.extend(str(x).strip() for x in aliases if str(x).strip())
+    if rich:
+        st = target.get("search_terms") or {}
+        if isinstance(st, dict):
+            for bucket in ("exact", "zh", "drug_or_class"):
+                words.extend(str(x).strip() for x in (st.get(bucket) or []) if str(x).strip())
     if not words and target.get("name"):
         words.append(str(target["name"]).strip())
     for w in words:
@@ -185,40 +215,52 @@ def match_target(
         return None
 
     cfg = config if config is not None else load_targets_config()
-    targets = cfg.get("targets") or []
-    if not targets:
+    # 运行时 targets 优先；未命中时再搜 knowledge_targets
+    pools: list[list[dict[str, Any]]] = [
+        list(cfg.get("targets") or []),
+        list(cfg.get("knowledge_targets") or []),
+    ]
+    if not any(pools):
         return None
 
     nq = _norm_key(q)
     if not nq:
         return None
 
-    # 1) 精确匹配
-    for t in targets:
-        for key in _target_match_keys(t):
-            if _norm_key(key) == nq:
-                return t
-
-    # 2) 包含匹配（避免过短误伤：query 至少 3 字符，或候选键较短时允许）
-    candidates: list[tuple[int, dict[str, Any]]] = []
-    for t in targets:
-        for key in _target_match_keys(t):
-            nk = _norm_key(key)
-            if not nk:
-                continue
-            if nq in nk or nk in nq:
-                # 过短串（如 tf/met）只允许精确，已在步骤1处理
-                if min(len(nq), len(nk)) < 3 and nq != nk:
-                    continue
-                # 评分：更短的“差异”优先（更像同一个靶点）
-                score = abs(len(nq) - len(nk))
-                candidates.append((score, t))
-                break
-
-    if not candidates:
+    def _exact(pool: list[dict[str, Any]]) -> dict[str, Any] | None:
+        for t in pool:
+            for key in _target_match_keys(t):
+                if _norm_key(key) == nq:
+                    return t
         return None
-    candidates.sort(key=lambda x: x[0])
-    return candidates[0][1]
+
+    def _fuzzy(pool: list[dict[str, Any]]) -> dict[str, Any] | None:
+        candidates: list[tuple[int, dict[str, Any]]] = []
+        for t in pool:
+            for key in _target_match_keys(t):
+                nk = _norm_key(key)
+                if not nk:
+                    continue
+                if nq in nk or nk in nq:
+                    if min(len(nq), len(nk)) < 3 and nq != nk:
+                        continue
+                    score = abs(len(nq) - len(nk))
+                    candidates.append((score, t))
+                    break
+        if not candidates:
+            return None
+        candidates.sort(key=lambda x: x[0])
+        return candidates[0][1]
+
+    for pool in pools:
+        hit = _exact(pool)
+        if hit:
+            return hit
+    for pool in pools:
+        hit = _fuzzy(pool)
+        if hit:
+            return hit
+    return None
 
 
 def resolve_target_query(
