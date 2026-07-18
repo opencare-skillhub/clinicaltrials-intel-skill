@@ -4,6 +4,57 @@
 
 ---
 
+## v3.1.0 (2026-07-18) — 可复用靶点 YAML + 单一靶点推送 + 日报关键词
+
+### 一、胰腺癌靶点 YAML 化（可复用）
+
+**动机**：靶点关键词长期散落在 `.env KEYWORDS` 长串里，难维护、难跨项目复用。
+
+**方案**：
+- 新增 `assets/pancreatic_targets.yaml`（core / A / B / C 分组 + aliases + keywords）
+- 新增 `lib/targets.py`：`expand_keywords` / `resolve_default_keywords` / `match_target` / `resolve_target_query`
+- `.env` 默认 `KEYWORDS=yaml`；也可逗号列表临时覆盖
+
+覆盖清单：EGFR、MET、HER2、TROP2、CLDN18.2、TF、MSLN、B7-H3(CD276)、Nectin-4、NTRK、CDH17、CEACAM5、MTAP、MUC1、FOLR1、DLL3、CA125 等。
+
+### 二、单一靶点 → GeWe 文字
+
+- 主菜单新增 **5️⃣ 单一靶点推送**（默认中国中心 + top10 + gewe_txt）
+- CLI：`python3 main.py --target B7H3 --china --top 10 --send-gewe-txt`
+- 输入与 YAML 做泛化匹配：大小写、分隔符、别名（`b7h3`/`CD276`/`claudin18.2`）
+- 未命中 YAML 不阻断，按原文检索（菜单二次确认）
+- 仍复用 `run_cli_mode` 两阶段：抓取 → 翻译落地 → 渠道推送
+
+### 三、日报模版增加检索关键词
+
+汇总文案由：
+
+```text
+发现 N 个符合条件的临床试验
+```
+
+升级为：
+
+```text
+发现 N 个符合条件的临床试验
+检索关键词: B7-H3 (CD276)（B7H3 / B7-H3 / CD276）
+```
+
+实现于 `lib/content_builder._format_keywords_line`；`main.py` 与 `daily_ctgov_check_tgbot.py` 均写入。
+
+### 四、验证
+
+- YAML 展开 41 词；别名匹配用例通过
+- 在线 CTGov：`B7H3` + china top3 可返回试验
+- 未提交任何真实凭据；`.fastgpt.env.txt` 等本地杂项加入 gitignore
+
+### 五、文档
+
+- 更新 `README.md` / `SKILL.md` / `references/config-reference.md`
+- 新增 `HANDOFF.md` 版本交接
+
+---
+
 ## v3.0.0 (2026-06-21) — 多癌症/病种支持 + 品牌文案通用化
 
 ### 重大特性：从胰腺癌单病种升级为多病种通用平台
@@ -69,4 +120,4 @@
 
 ---
 
-*日志更新时间：2026-06-21 12:10:00*
+*日志更新时间：2026-07-18*

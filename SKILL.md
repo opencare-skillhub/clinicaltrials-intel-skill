@@ -89,8 +89,10 @@ python3 main.py
 # 主菜单快捷推送（无参数进入 interactive_menu）：
 #   3️⃣  10 个最近中国试验 → 微信文字 (gewe_txt)   ← 默认开启，开箱即用
 #   4️⃣  10 个最近中国试验 → 微信卡片 (gewe_card)  ← 默认关闭，需先在 config.yaml 设 channels.gewe_card: true
-# 两个选项都复用 run_cli_mode 两阶段流程（china=True, latest=True, top=10）。
+#   5️⃣  单一靶点 → 微信文字 (gewe_txt)            ← 手工输入靶点，匹配 assets/pancreatic_targets.yaml 后检索
+# 选项 3/4/5 都复用 run_cli_mode 两阶段流程（默认 china=True, latest=True, top=10）。
 # 选项 4 在卡片关闭时会拦在抓取前并提示配置，不白跑流程。
+# 选项 5 / CLI --target 会做大小写与别名泛化匹配（如 b7h3→B7-H3/CD276）；未命中 YAML 仍可按原文检索。
 
 # 自动全流程（适合 cron）
 python3 main.py --auto
@@ -117,6 +119,8 @@ python3 fastgpt_sync.py --once --mode=today   # 同步（today | all）
 - **推送失败隔离**：多群循环推送时某群失败不影响其他群；微信失败不影响 TG 主渠道。
 - **多疾病支持**：疾病由 `.env` 的 `SEARCH_CONDITION` 或命令行 `--condition` 控制，一次运行一种疾病。落地目录、FastGPT 集合自动按疾病分（`output/{date}-{disease}/`）。**不要**为不同疾病新建仓库——配置切换即可。
 - **品牌文案通用化**：标题/footer 统一从 `lib/branding.py` 的 `get_title(condition)` / `get_footer(condition)` 取，**不要**在业务代码里硬编码。胰腺癌保持「小胰宝」专属文案（关注小胰宝助手公众号）；其它疾病走通用「小x宝{疾病中文}」文案（关注小胰宝公众号 + github搜索opencare社区）。新增疾病中文映射加到 `branding.py` 的 `_DISEASE_CN`。
+- **胰腺癌靶点 YAML（可复用）**：权威清单在 `assets/pancreatic_targets.yaml`（core/A/B/C 分组 + 别名 + 检索词）。抓取默认 `KEYWORDS=yaml` 由此展开；临时覆盖可写逗号列表。其它项目复用：复制该 YAML，或 `from lib.targets import expand_keywords`。增删靶点只改 YAML，不要在业务代码硬编码长关键词串。
+- **单一靶点推送**：主菜单选项 5，或 CLI `python3 main.py --target B7H3 --china --top 10 --send-gewe-txt`。匹配逻辑在 `lib.targets.resolve_target_query`（id/name/aliases/keywords/cn_name，大小写与分隔符无关）；命中后用该靶点 keywords+aliases 覆盖默认 KEYWORDS，流程仍是抓取→翻译→GeWe 文字。
 - **重试**：同步脚本内置 3 次重试，适配不稳定网络。
 
 更详细的架构与历史决策见 `references/architecture.md`，配置项逐条说明见 `references/config-reference.md`。

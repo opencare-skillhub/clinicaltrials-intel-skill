@@ -14,6 +14,9 @@
     # 等价简写
     python3 main.py --top 10 --china --channels gewe_card
 
+    # 单一靶点(YAML 匹配别名) → GeWe 文字
+    python3 main.py --target B7H3 --china --top 10 --send-gewe-txt
+
     # 全渠道推送当天试验
     python3 main.py --all-channels
 
@@ -39,6 +42,30 @@ UPLOAD_MODE = "today"  # "today" 或 "all"
 
 # 所有支持的渠道名
 ALL_CHANNELS = ["tg", "gewe_card", "gewe_txt", "feishu", "fastgpt"]
+
+
+def _make_cli_namespace(**overrides):
+    """构造与 build_parser 字段对齐的 Namespace(快捷菜单复用)。"""
+    defaults = dict(
+        china=False,
+        latest=True,
+        top=None,
+        condition=None,
+        status=None,
+        days_back=None,
+        target=None,
+        send_tg=False,
+        send_gewe_card=False,
+        send_gewe_txt=False,
+        send_feishu=False,
+        send_fastgpt=False,
+        channels=None,
+        no_channels=None,
+        all_channels=False,
+        auto=False,
+    )
+    defaults.update(overrides)
+    return argparse.Namespace(**defaults)
 
 
 def print_banner():
@@ -103,6 +130,8 @@ def build_parser():
 示例:
   %(prog)s --10 --china --send-gewe-card          10 个最近中国试验,卡片推送微信
   %(prog)s --top 20 --china --channels tg,gewe_card   简写:多渠道
+  %(prog)s --target B7H3 --china --top 10 --send-gewe-txt
+                                                  单一靶点(YAML 别名匹配)→微信文字
   %(prog)s --all-channels                          全渠道推送当天试验
   %(prog)s --china --top 20                        仅抓取不推送(落地 JSON)
   %(prog)s --auto                                  完整自动流程(向后兼容)
@@ -124,6 +153,10 @@ def build_parser():
                              help="试验状态(默认 RECRUITING)")
     fetch_group.add_argument("--days-back", type=int, default=None,
                              help="时间窗天数(默认 30,0=不过滤)")
+    fetch_group.add_argument(
+        "--target", type=str, default=None, metavar="NAME",
+        help="单一靶点(与 assets/pancreatic_targets.yaml 匹配; 支持别名/大小写,如 B7H3/CD276/CLDN18.2)",
+    )
 
     # ---- 推送开关(正交)----
     push_group = parser.add_argument_group("推送开关(可组合)")
@@ -161,7 +194,8 @@ def resolve_channels(args):
 def has_fetch_filters(args):
     """判断是否指定了任何抓取过滤器或推送渠道(用于区分 CLI 模式 vs 交互菜单)"""
     return (args.china or args.top is not None or args.condition or
-            args.status or args.days_back is not None or args.channels or
+            args.status or args.days_back is not None or
+            getattr(args, "target", None) or args.channels or
             args.all_channels or args.send_tg or args.send_gewe_card or
             args.send_gewe_txt or args.send_feishu or args.send_fastgpt)
 
@@ -243,24 +277,51 @@ def run_cli_mode(args):
     CLI 模式:两阶段分离执行。
     阶段1:批量抓取 → 翻译 → 落地 JSON → 生成汇总/详情内容(build_push_content)
     阶段2:各推送渠道从已生成内容消费(dispatch_push)
+
+    支持 --target: 与 assets/pancreatic_targets.yaml 匹配后,用该靶点 keywords 覆盖默认 KEYWORDS。
     """
     from lib.ctgov_api import fetch_studies, get_nct_id, has_china_center
     from lib.content_builder import build_push_content
     from lib.config import get_workflow_setting
+    from lib.targets import resolve_target_query
 
     print_banner()
 
+    # ---- 单一靶点解析(可选)----
+    keywords = None
+    target_label = None
+    raw_target = getattr(args, "target", None)
+    if raw_target:
+        resolved = resolve_target_query(raw_target)
+        keywords = resolved["keywords"]
+        target_label = resolved["display_name"]
+        if resolved["matched"]:
+            t = resolved["target"] or {}
+            print(
+                f"🎯 靶点匹配: 输入「{resolved['query']}」→ "
+                f"{target_label} [group={t.get('group')}, id={t.get('id')}]"
+            )
+            print(f"   检索词: {', '.join(keywords)}")
+        else:
+            print(f"⚠️  未在 YAML 命中「{raw_target}」,按原文检索: {', '.join(keywords)}")
+            print("   提示: 可输入 B7H3 / CD276 / CLDN18.2 / Claudin 18.2 等别名")
+
     # ==================== 阶段1:抓取 + 翻译 + 落地 + 生成内容 ====================
     sort = "LastUpdatePostDate:desc" if args.latest else None
-    print(f"🔍 阶段1:抓取试验(condition={args.condition or '默认'}, china={args.china}, top={args.top}, days_back={args.days_back})")
+    scope = f", target={target_label}" if target_label else ""
+    print(
+        f"🔍 阶段1:抓取试验(condition={args.condition or '默认'}, "
+        f"china={args.china}, top={args.top}, days_back={args.days_back}{scope})"
+    )
 
     studies = fetch_studies(
         condition=args.condition,
+        keywords=keywords,
         status=args.status,
         china_only=args.china,
         sort=sort,
         top=args.top,
-        days_back=args.days_back
+        days_back=args.days_back,
     )
     print(f"   抓取到 {len(studies)} 个试验")
 
@@ -278,9 +339,20 @@ def run_cli_mode(args):
         print(f"   ... 共 {len(studies)} 个")
 
     # 一次性翻译 + 落地 JSON + 生成内容(不再单篇推送)
+    # 未指定 --target 时,把默认 KEYWORDS 也带进日报「检索关键词」行
+    if keywords is None:
+        from lib.ctgov_api import _DEFAULT_KEYWORDS
+        keywords = list(_DEFAULT_KEYWORDS)
+
     auto_save = get_workflow_setting("auto_save_json", True)
     print(f"\n🔄 阶段1:批量翻译 + 落地 JSON + 生成推送内容...")
-    content = build_push_content(studies, auto_save_json=auto_save, condition=args.condition)
+    content = build_push_content(
+        studies,
+        auto_save_json=auto_save,
+        condition=args.condition,
+        keywords=keywords,
+        target_label=target_label,
+    )
     if not content:
         print("⚠️  内容生成失败")
         return
@@ -297,7 +369,8 @@ def run_cli_mode(args):
         dispatch_push(ch, content)
 
     print(f"\n{'='*60}")
-    print(f"✅ 全部完成:阶段1 抓取翻译 {len(studies)} 个,阶段2 推送 {len(channels)} 个渠道")
+    done_target = f", 靶点={target_label}" if target_label else ""
+    print(f"✅ 全部完成:阶段1 抓取翻译 {len(studies)} 个{done_target},阶段2 推送 {len(channels)} 个渠道")
     print(f"{'='*60}")
 
 
@@ -468,6 +541,72 @@ def manual_menu():
         input("\n按回车键继续...")
 
 
+def single_target_gewe_txt_menu():
+    """
+    单一靶点 → 抓取/翻译/推送 GeWe 文字。
+    流程与选项 3 一致(默认 10 个最近中国中心试验),关键词由 YAML 靶点展开。
+    """
+    from lib.targets import format_targets_catalog, resolve_target_query
+
+    print(f"\n{'='*60}")
+    print("🎯 单一靶点 → 微信文字 (GeWe 文字)")
+    print(f"{'='*60}\n")
+    print("支持的靶点(assets/pancreatic_targets.yaml):")
+    print(format_targets_catalog())
+    print("\n提示: 大小写不敏感; 可用别名,如 b7h3 / CD276 / claudin18.2 / HER2 / ERBB2")
+    print("      未命中 YAML 时仍按原文检索,不阻断流程。\n")
+
+    raw = input("请输入靶点名称: ").strip()
+    if not raw:
+        print("❌ 未输入靶点")
+        return
+
+    resolved = resolve_target_query(raw)
+    if not resolved["keywords"]:
+        print("❌ 无法解析检索词")
+        return
+
+    if resolved["matched"]:
+        t = resolved["target"] or {}
+        print(
+            f"\n✅ 已匹配: {resolved['display_name']} "
+            f"[id={t.get('id')}, group={t.get('group')}]"
+        )
+        print(f"   检索词: {', '.join(resolved['keywords'])}")
+    else:
+        print(f"\n⚠️  未命中 YAML,将按原文「{raw}」检索")
+        confirm = input("是否继续? [Y/n]: ").strip().lower()
+        if confirm in {"n", "no"}:
+            print("已取消")
+            return
+
+    # 可选: 条数 / 是否仅中国(默认对齐选项3)
+    top_raw = input("取前 N 个试验 [默认 10]: ").strip()
+    try:
+        top_n = int(top_raw) if top_raw else 10
+        if top_n <= 0:
+            top_n = 10
+    except ValueError:
+        top_n = 10
+
+    china_raw = input("仅含中国中心? [Y/n, 默认 Y]: ").strip().lower()
+    china_only = china_raw not in {"n", "no"}
+
+    print(
+        f"\n▶️  开始: 靶点={resolved['display_name']}, top={top_n}, "
+        f"china={china_only} → GeWe 文字"
+    )
+    args = _make_cli_namespace(
+        china=china_only,
+        latest=True,
+        top=top_n,
+        days_back=0,
+        target=raw,
+        send_gewe_txt=True,
+    )
+    run_cli_mode(args)
+
+
 def interactive_menu():
     """顶层交互菜单(向后兼容,无参数时进入)"""
     print_banner()
@@ -476,20 +615,18 @@ def interactive_menu():
     print("2️⃣  手动菜单 (单独执行各步骤)")
     print("3️⃣  快捷推送: 10 个最近中国试验 → 微信文字 (GeWe 文字)")
     print("4️⃣  快捷推送: 10 个最近中国试验 → 微信卡片 (需先在 config.yaml 开启 gewe_card)")
+    print("5️⃣  单一靶点推送: 指定靶点 → 搜索/翻译 → 微信文字 (GeWe 文字)")
     print("0️⃣  退出")
 
-    choice = input("\n请选择 [0-4]: ").strip()
+    choice = input("\n请选择 [0-5]: ").strip()
     if choice == "1":
         auto_pipeline()
     elif choice == "2":
         manual_menu()
     elif choice == "3":
         # 快捷入口:复用 CLI 模式,推 GeWe 文字(TG 切片格式转纯文本,默认开启)
-        args = argparse.Namespace(
-            china=True, latest=True, top=10, condition=None, status=None, days_back=0,
-            send_tg=False, send_gewe_card=False, send_gewe_txt=True,
-            send_feishu=False, send_fastgpt=False,
-            channels=None, no_channels=None, all_channels=False
+        args = _make_cli_namespace(
+            china=True, latest=True, top=10, days_back=0, send_gewe_txt=True,
         )
         run_cli_mode(args)
     elif choice == "4":
@@ -501,13 +638,12 @@ def interactive_menu():
             print("   请先在 config.yaml 中设置 channels.gewe_card: true,")
             print("   或运行时加 --send-gewe-card 参数强制开启后重试。")
             return
-        args = argparse.Namespace(
-            china=True, latest=True, top=10, condition=None, status=None, days_back=0,
-            send_tg=False, send_gewe_card=True, send_gewe_txt=False,
-            send_feishu=False, send_fastgpt=False,
-            channels=None, no_channels=None, all_channels=False
+        args = _make_cli_namespace(
+            china=True, latest=True, top=10, days_back=0, send_gewe_card=True,
         )
         run_cli_mode(args)
+    elif choice == "5":
+        single_target_gewe_txt_menu()
     elif choice == "0":
         print("\n👋 感谢使用小胰宝临床试验订阅系统！")
         sys.exit(0)

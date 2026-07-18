@@ -67,8 +67,21 @@
 | 变量 | 说明 |
 |------|------|
 | `SEARCH_CONDITION` | 搜索疾病条件，默认 `Pancreatic Cancer` |
-| `KEYWORDS` | 关注关键词（逗号分隔） |
+| `KEYWORDS` | 关键词来源。`yaml` / `@yaml` / `auto` / 空 → 从 `assets/pancreatic_targets.yaml` 展开；逗号分隔列表 → 显式覆盖。YAML 分组：core + A（EGFR/MET/HER2/TROP2/CLDN18.2/TF）+ B（MSLN/B7-H3/Nectin-4/NTRK/CDH17/CEACAM5/MTAP）+ C（MUC1/FOLR1/DLL3/CA125） |
 | `DAYS_BACK` | 回溯天数，默认 30 |
+
+### 可复用靶点清单
+| 文件 | 说明 |
+|------|------|
+| `assets/pancreatic_targets.yaml` | 胰腺癌靶点权威配置（分组/别名/检索词），其它项目可复制或软链接复用 |
+| `lib/targets.py` | 加载/展开/匹配 API：`expand_keywords()` / `resolve_default_keywords()` / `resolve_target_query()` / `match_target()` |
+
+### 单一靶点 CLI
+| 参数 | 说明 |
+|------|------|
+| `--target NAME` | 指定单一靶点；与 YAML 做别名/大小写泛化匹配后，用该靶点 keywords 覆盖默认 KEYWORDS |
+| 示例 | `python3 main.py --target CD276 --china --top 10 --send-gewe-txt` |
+| 菜单 | 主菜单 `5️⃣ 单一靶点推送`（默认中国中心 + top10 + GeWe 文字） |
 
 ---
 

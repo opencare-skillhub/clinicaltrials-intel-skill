@@ -42,15 +42,33 @@ python3 main.py           # 运行(必须在仓库根目录)
 clinicaltrials-intel-skill/
 ├── main.py / push_existing_report.py / daily_ctgov_check_tgbot.py   # 入口脚本
 │   / ctgov_full_sync_rag.py / fastgpt_sync.py
-├── lib/                       # 核心模块(config/ctgov_api/llm_client/channels/*)
+├── lib/                       # 核心模块(config/ctgov_api/targets/llm_client/channels/*)
 ├── config.yaml                # 运行时配置(setup.sh 生成,gitignore)
 ├── requirements.txt           # 依赖清单(补齐主项目漏掉的 PyYAML)
 ├── SKILL.md                   # 技能主体
-├── assets/                    # 配置模板(.env.template / config.yaml.template)
+├── HANDOFF.md                 # 版本交接说明
+├── dev.log                    # 开发日志
+├── assets/                    # 配置模板 + 可复用靶点清单
+│   ├── .env.template
+│   ├── config.yaml.template
+│   └── pancreatic_targets.yaml   # 胰腺癌靶点 YAML（core/A/B/C，可复用）
 ├── scripts/                   # setup.sh(部署) check_config.py(校验) install.sh(装技能)
 ├── references/                # 架构文档 + 配置参考
 └── docs/                      # 使用文档
 ```
+
+## 胰腺癌靶点 YAML（可复用）
+
+权威靶点清单：`assets/pancreatic_targets.yaml`（分组 core / A / B / C + 别名 + 检索词）。
+
+| 用法 | 说明 |
+|------|------|
+| 默认抓取 | `.env` 设 `KEYWORDS=yaml`（推荐），自动从 YAML 展开 |
+| 临时覆盖 | `KEYWORDS=KRAS,B7-H3` 逗号列表覆盖 YAML |
+| 其它项目复用 | 复制该 YAML，或 `from lib.targets import expand_keywords` |
+| 增删靶点 | **只改 YAML**，不要在业务代码硬编码长关键词串 |
+
+覆盖靶点示例：EGFR / MET / HER2 / TROP2 / CLDN18.2 / TF / MSLN / B7-H3(CD276) / Nectin-4 / NTRK / CDH17 / CEACAM5 / MTAP / MUC1 / FOLR1 / DLL3 / CA125 等。
 
 ## 常用命令
 
@@ -58,12 +76,20 @@ clinicaltrials-intel-skill/
 # 抓取 10 个最近中国试验并推 GeWe 文字(默认开箱渠道)
 python3 main.py --10 --china --send-gewe-txt
 
+# 单一靶点(YAML 别名匹配) → 搜索/翻译 → GeWe 文字
+python3 main.py --target B7H3 --china --top 10 --send-gewe-txt
+python3 main.py --target CD276 --china --top 10 --send-gewe-txt
+python3 main.py --target "Claudin 18.2" --china --top 10 --send-gewe-txt
+
 # 切换疾病:--condition 指定(目录/标题/footer 自动跟随)
 python3 main.py --top 1 --condition "Breast Cancer" --china --send-gewe-txt   # 乳腺癌
 python3 main.py --top 1 --condition "Lung Cancer" --china --send-gewe-txt     # 肺癌
 # 长期固定某疾病:改 .env 的 SEARCH_CONDITION=Breast Cancer
 
 # 主菜单(无参数)
+#  3️⃣  10 个最近中国试验 → 微信文字
+#  4️⃣  10 个最近中国试验 → 微信卡片
+#  5️⃣  单一靶点 → 微信文字（手工输入，YAML 别名/大小写匹配）
 python3 main.py
 
 # 全自动流程(适合 cron)
@@ -71,6 +97,17 @@ python3 main.py --auto
 
 # 推送已有报告(补发/测试)
 python3 push_existing_report.py --latest --send-gewe-txt
+```
+
+日报汇总会带上 **检索关键词** 行，例如：
+
+```text
+# 🏥 小胰宝临床情报小组日报
+
+发现 1 个符合条件的临床试验
+检索关键词: B7-H3 (CD276)（B7H3 / B7-H3 / CD276）
+
+## 【汇总清单】
 ```
 
 ## 集成与贡献

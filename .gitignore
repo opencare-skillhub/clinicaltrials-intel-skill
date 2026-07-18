@@ -10,6 +10,7 @@
 .env
 .env.*
 !.env.template
+.fastgpt.env.txt
 config.yaml
 config.yml
 !assets/.env.template
@@ -41,6 +42,8 @@ env/
 *.swp
 *.swo
 *~
+discord.md
+test_llm_fallback.py
 
 # ==================== 含凭据的调试/示例脚本（永不提交） ====================
 sample_gewe_*.py

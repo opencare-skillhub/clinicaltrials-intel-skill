@@ -132,10 +132,24 @@ def send_telegram_combined(studies):
 
         # 1. 汇总列表
         print(f"[{datetime.now()}] Preparing summary list for {len(studies)} studies...")
+        # 与 content_builder 一致:日报模版带上检索关键词,便于理解筛选条件
+        try:
+            from lib.ctgov_api import _DEFAULT_KEYWORDS
+            from lib.content_builder import _format_keywords_line
+            keywords_line = _format_keywords_line(keywords=_DEFAULT_KEYWORDS)
+        except Exception:
+            keywords_line = "检索关键词: （默认 KEYWORDS）"
+
         rf.write(f"### 发现 {len(studies)} 个符合条件的临床试验 (过去 30 天内更新)\n\n")
+        rf.write(f"- {keywords_line}\n\n")
         rf.write(f"## 【汇总清单】\n")
 
-        summary_msg = f"# {get_title()}\n\n发现 {len(studies)} 个符合条件的临床试验\n\n## 【汇总清单】\n"
+        summary_msg = (
+            f"# {get_title()}\n\n"
+            f"发现 {len(studies)} 个符合条件的临床试验\n"
+            f"{keywords_line}\n\n"
+            f"## 【汇总清单】\n"
+        )
         for i, study in enumerate(studies):
             nct_id = get_nct_id(study)
             brief_title = study.get("protocolSection", {}).get("identificationModule", {}).get("briefTitle", "N/A")

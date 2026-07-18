@@ -6,7 +6,7 @@ ctgov_api - ClinicalTrials.gov 统一抓取
 
 支持灵活的查询过滤:
 - condition:  疾病条件(默认从 .env 读 SEARCH_CONDITION)
-- keywords:   关键词列表(默认从 .env 读 KEYWORDS)
+- keywords:   关键词列表(默认从 .env 的 KEYWORDS 或 assets/pancreatic_targets.yaml 展开)
 - status:     试验状态过滤(默认 RECRUITING)
 - china_only: 仅抓取含中国中心的试验(用 AREA[LocationCountry]China)
 - sort:       排序(默认 LastUpdatePostDate:desc,即最近更新优先)
@@ -15,7 +15,9 @@ ctgov_api - ClinicalTrials.gov 统一抓取
 
 环境变量(作为默认值,可被函数参数覆盖):
     SEARCH_CONDITION  疾病条件(默认 "Pancreatic Cancer")
-    KEYWORDS          关键词,逗号分隔(默认 KRAS,免疫,TP53,ATM,BRCA,PMT5,HER2,ERBB2)
+    KEYWORDS          关键词来源:
+                        - yaml / @yaml / auto / 空 → 读 assets/pancreatic_targets.yaml
+                        - 逗号分隔列表 → 显式覆盖 YAML
     STATUS            试验状态(默认 RECRUITING)
     DAYS_BACK         时间窗天数(默认 30)
 """
@@ -27,16 +29,15 @@ import requests
 import urllib3
 from dotenv import load_dotenv
 
-from lib.text_utils import parse_list_config
+from lib.targets import resolve_default_keywords
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 load_dotenv()
 
-# ============ 默认配置(从 .env 读,作为 fallback)============
+# ============ 默认配置(从 .env / YAML 读,作为 fallback)============
 _DEFAULT_CONDITION = os.getenv("SEARCH_CONDITION", "Pancreatic Cancer")
-_DEFAULT_KEYWORDS = parse_list_config(
-    os.getenv("KEYWORDS", "KRAS,Immune,Immunotherapy,TP53,ATM,免疫,免疫治疗,BRCA,HER2")
-)
+# KEYWORDS 空 / yaml / auto → 走 assets/pancreatic_targets.yaml；否则逗号列表覆盖
+_DEFAULT_KEYWORDS = resolve_default_keywords(os.getenv("KEYWORDS", "yaml"))
 _DEFAULT_STATUS = os.getenv("STATUS", "RECRUITING")
 _DEFAULT_DAYS_BACK = int(os.getenv("DAYS_BACK", "30"))
 

@@ -87,7 +87,42 @@ def format_study_detail(study):
     return detail, translated_info
 
 
-def build_push_content(studies, auto_save_json=True, condition=None):
+def _format_keywords_line(keywords=None, target_label=None, max_show=12) -> str:
+    """
+    生成日报里的「检索关键词」行，便于理解本次筛选条件。
+
+    例:
+      检索关键词: B7-H3 (CD276)（B7H3 / B7-H3 / CD276）
+      检索关键词: KRAS / Immune / Immunotherapy / ... (+29)
+    """
+    words = []
+    if keywords:
+        for k in keywords:
+            s = str(k).strip()
+            if s and s not in words:
+                words.append(s)
+
+    if not words and not target_label:
+        return "检索关键词: （默认 KEYWORDS / YAML 全量靶点）"
+
+    shown = words[:max_show]
+    more = len(words) - len(shown)
+    kw_part = " / ".join(shown) if shown else ""
+    if more > 0:
+        kw_part = f"{kw_part} / ... (+{more})" if kw_part else f"... (+{more})"
+
+    if target_label and kw_part:
+        # 单一靶点：展示名 + 展开别名
+        if str(target_label).strip() and str(target_label).strip() not in words[:1]:
+            return f"检索关键词: {target_label}（{kw_part}）"
+        return f"检索关键词: {kw_part}"
+    if target_label:
+        return f"检索关键词: {target_label}"
+    return f"检索关键词: {kw_part}"
+
+
+def build_push_content(studies, auto_save_json=True, condition=None,
+                       keywords=None, target_label=None):
     """
     阶段1:批量处理所有 studies。
     - 翻译每个试验(标题/状态/适应症)
@@ -99,6 +134,8 @@ def build_push_content(studies, auto_save_json=True, condition=None):
         auto_save_json: True 时落地每个 study 到 output/{date}-{condition}/{nct}.json
         condition:      疾病条件(用于目录命名)。None 时回退到 .env 的 SEARCH_CONDITION。
                         这样命令行 --condition 能正确反映到落地目录名。
+        keywords:       本次实际检索关键词列表(写入日报模版,便于理解筛选条件)
+        target_label:   单一靶点展示名(可选,与 keywords 一起写进「检索关键词」行)
 
     返回:
         dict,含 studies/summary_msg/detail_groups/footer/report_file/study_details
@@ -116,7 +153,13 @@ def build_push_content(studies, auto_save_json=True, condition=None):
     os.makedirs(base_dir, exist_ok=True)
     report_file = os.path.join(base_dir, "telegram_push_report.txt")
 
-    summary_msg = f"# {get_title(effective_condition)}\n\n发现 {len(studies)} 个符合条件的临床试验\n\n## 【汇总清单】\n"
+    keywords_line = _format_keywords_line(keywords=keywords, target_label=target_label)
+    summary_msg = (
+        f"# {get_title(effective_condition)}\n\n"
+        f"发现 {len(studies)} 个符合条件的临床试验\n"
+        f"{keywords_line}\n\n"
+        f"## 【汇总清单】\n"
+    )
     study_details = []  # 每个试验的 (nct_id, detail_text, translated_info)
     total = len(studies)
 
@@ -124,7 +167,8 @@ def build_push_content(studies, auto_save_json=True, condition=None):
         rf.write(f"# {get_title(effective_condition)} ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})\n\n")
         rf.write(f"## 🔬 {disease_cn_name(effective_condition)}临床试验每日更新\n\n")
         rf.write(f"- 监测日期: 最近30天\n")
-        rf.write(f"- 监测要素：#{disease_cn_name(effective_condition)}相关临床试验动态\n\n")
+        rf.write(f"- 监测要素：#{disease_cn_name(effective_condition)}相关临床试验动态\n")
+        rf.write(f"- {keywords_line}\n\n")
         rf.write(f"### 发现 {total} 个符合条件的临床试验\n\n")
         rf.write(f"## 【汇总清单】\n")
 
