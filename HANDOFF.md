@@ -1,8 +1,18 @@
-# Handoff — clinicaltrials-intel v3.1.0
+# Handoff — clinicaltrials-intel v3.1.0 (+ ChiCTR 实验分支)
 
 更新日期：2026-07-18  
-当前分支：`main`  
+稳定分支：`main`  
+实验分支：`feat/chictr-cn-trials`（**默认不合并，不干扰 main CTGov 流程**）  
 远程：`https://github.com/opencare-skillhub/clinicaltrials-intel-skill.git`
+
+---
+
+## ChiCTR 实验模块（仅 feature 分支）
+
+- 设计：`docs/chictr-design.md`
+- 代码：`lib/chictr/*`（WHO ICTRP 基线 + HTML 解析 + CTGov 适配）
+- 测试：`python3 tests/test_chictr_html.py` / `python3 tests/test_chictr_client_smoke.py`
+- main 默认行为未改：`fetch_studies` 签名与菜单 1–5 不变
 
 ---
 
